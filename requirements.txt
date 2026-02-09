@@ -1,0 +1,16 @@
+# Web Framework
+Django>=4.2,<5.0
+djangorestframework>=3.14
+django-cors-headers
+
+# Image Processing
+Pillow  # Xử lý ảnh cơ bản
+numpy   # Xử lý ma trận
+
+# Medical Imaging (Sẽ cần sau này)
+pydicom>=2.4     # Đọc file DICOM
+nibabel>=5.1     # Đọc file MRI NIfTI
+
+# AI Engine (Cài bản CPU trước cho nhẹ, lên GPU sau)
+# torch --index-url https://download.pytorch.org/whl/cpu
+# torchvision --index-url https://download.pytorch.org/whl/cpu
