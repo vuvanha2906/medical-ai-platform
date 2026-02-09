@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h3">Study Report: <code class="text-muted">{{ study.id|stringformat:".8s" }}</code></h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/" class="btn btn-sm btn-outline-secondary">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+        </a>
+        <button type="button" class="btn btn-sm btn-primary ms-2" onclick="window.print()">
+            <i class="fa-solid fa-print me-1"></i> Print Report
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-md-3">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Patient Metadata</h6>
+            </div>
+            <ul class="list-group list-group-flush small">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Modality:</span>
+                    <span class="fw-bold">{{ study.get_study_type_display }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Date:</span>
+                    <span>{{ study.created_at|date:"Y-m-d H:i" }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Status:</span>
+                    {% if study.status == 'SUCCESS' %}
+                        <span class="badge bg-success">FINALIZED</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">{{ study.status }}</span>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Clinical Notes</h6>
+            </div>
+            <div class="card-body">
+                <textarea class="form-control form-control-sm" rows="5" placeholder="Radiologist notes..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Visual Analysis</h6>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="btnradio" id="btnOriginal" autocomplete="off" checked onclick="showOriginal()">
+                    <label class="btn btn-outline-secondary" for="btnOriginal">Original</label>
+
+                    <input type="radio" class="btn-check" name="btnradio" id="btnHeatmap" autocomplete="off" onclick="showHeatmap()">
+                    <label class="btn btn-outline-secondary" for="btnHeatmap">AI Heatmap</label>
+                </div>
+            </div>
+            <div class="card-body bg-dark d-flex align-items-center justify-content-center" style="min-height: 400px; position: relative; overflow: hidden;">
+                {% if study.image %}
+                    <img id="img-original" src="{{ study.image.url }}" class="img-fluid" style="max-height: 400px; object-fit: contain;">
+
+                    {% if study.heatmap_image %}
+                        <img id="img-heatmap" src="{{ study.heatmap_image.url }}" class="img-fluid" style="max-height: 400px; object-fit: contain; display: none;">
+                    {% endif %}
+                {% else %}
+                    <div class="text-white-50">Image not available</div>
+                {% endif %}
+            </div>
+            <div class="card-footer small text-muted">
+                <i class="fa-solid fa-search-plus"></i> Use mouse wheel to zoom (Not implemented in demo)
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-top-primary">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold text-primary">
+                    <i class="fa-solid fa-microchip me-2"></i> AI Prediction Results
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if study.ai_results %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle">
+                            <thead class="text-muted small border-bottom">
+                                <tr>
+                                    <th>Condition / Label</th>
+                                    <th class="text-end">Probability</th>
+                                    <th style="width: 30%">Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for label, score in study.ai_results.items %}
+                                <tr>
+                                    <td class="fw-bold text-dark">{{ label|title }}</td>
+                                    <td class="text-end">{{ score|floatformat:2 }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar {% if score > 0.7 %}bg-danger{% elif score > 0.4 %}bg-warning{% else %}bg-success{% endif %}"
+                                                 role="progressbar"
+                                                 style="width: {% widthratio score 1 100 %}%;">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-light border mt-3 small">
+                        <strong>AI Summary:</strong> Based on the analysis, there are signs of high probability for
+                        {% for label, score in study.ai_results.items %}
+                            {% if score > 0.7 %} <span class="text-danger fw-bold">{{ label }}</span> {% endif %}
+                        {% endfor %}
+                        . Please correlate with clinical history.
+                    </div>
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 small text-muted">Processing Inference...</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Script đơn giản để chuyển đổi ảnh
+    function showOriginal() {
+        document.getElementById('img-original').style.display = 'block';
+        if(document.getElementById('img-heatmap'))
+            document.getElementById('img-heatmap').style.display = 'none';
+    }
+    function showHeatmap() {
+        if(document.getElementById('img-heatmap')) {
+            document.getElementById('img-original').style.display = 'none';
+            document.getElementById('img-heatmap').style.display = 'block';
+        } else {
+            alert("Heatmap processing is not yet complete or available.");
+            document.getElementById('btnOriginal').checked = true;
+        }
+    }
+</script>
+{% endblock %}

@@ -18,8 +18,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- THÊM DÒNG NÀY ---
 # Thêm thư mục 'apps' vào Python Path để Django tìm thấy users, studies...
-os.environ['PYTHONPATH'] = os.path.join(BASE_DIR, 'apps')
-
+# os.environ['PYTHONPATH'] = os.path.join(BASE_DIR, 'apps')
+sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -43,9 +43,9 @@ INSTALLED_APPS = [
     'rest_framework',
 
     # Sử dụng đường dẫn đầy đủ cho các ứng dụng
-    'apps.users',
-    'apps.studies',
-    'apps.ai_engine',
+    'users',
+    'studies',
+    'ai_engine',
 ]
 
 MIDDLEWARE = [
@@ -63,13 +63,14 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.static', # Thêm context processor cho static files
             ],
         },
     },
@@ -125,3 +126,4 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
+
