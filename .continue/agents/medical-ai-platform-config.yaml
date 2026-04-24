@@ -1,0 +1,436 @@
+name: Medical AI Platform Config
+version: 1.0.0
+schema: v1
+
+# Cấu hình chung
+enableAgentMode: true       # Bật Agent Mode
+#maxInputTokens: 128000      # 128K context (nếu model hỗ trợ)
+#maxOutputTokens: 128000
+allowCodebaseIndexing: true
+allowAutoEdits: true
+autoSaveAfterEdit: true
+defaultTemperature: 0.5
+defaultTopP: 0.9
+showTokenUsage: true
+useLegacyCompletionsEndpoint: false
+allowAnonymousTelemetry: false
+
+models:
+  - name: Gemini 2.5 Flash Lite
+    provider: gemini
+    model: gemini-2.5-flash-lite
+    apiKey: ${{ secrets.GEMINI_API_KEY }}
+        # Các role cần thiết
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+      - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: true  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+    # Giới hạn max tokens output
+#    maxCompletionTokens: 1024  # hoặc nhỏ hơn, tuỳ model
+#    maxCompletionTokens: 2048   # 1024 hơi bí, 2048 hợp lý hơn
+    maxCompletionTokens: 8192   # 1024 hơi bí, 2048 hợp lý hơn
+
+    # Giới hạn context input (history + prompt)
+    maxContextTokens: 32700     # 32k là điểm cân bằng tốt
+    maxTokens: 32760
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      contextLength: 262144
+      maxTokens: 65536
+
+
+    autocompleteOptions:
+      debounceDelay: 350
+      maxPromptTokens: 1536     # 1024 hơi ít cho file dài
+      onlyMyCode: true
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+
+  - name: Claude Sonnet 4.5
+    provider: anthropic
+    model: claude-sonnet-4-5
+    apiKey: ${{ secrets.CLAUDE_API_KEY }}
+
+        # Các role cần thiết
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+      - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: true  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+    # Giới hạn max tokens output
+#    maxCompletionTokens: 1024  # hoặc nhỏ hơn, tuỳ model
+#    maxCompletionTokens: 2048   # 1024 hơi bí, 2048 hợp lý hơn
+    maxCompletionTokens: 8192   # 1024 hơi bí, 2048 hợp lý hơn
+
+    # Giới hạn context input (history + prompt)
+    maxContextTokens: 32768     # 32k là điểm cân bằng tốt
+    maxTokens: 32768
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      temperature: 0.5
+      top_p: 0.9
+      top_k: 40
+      contextLength: 262144
+      maxTokens: 65536
+
+
+    autocompleteOptions:
+      debounceDelay: 350
+      maxPromptTokens: 1536     # 1024 hơi ít cho file dài
+      onlyMyCode: true
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+  - name: OpenAI GPT-4.1 mini
+    provider: openai
+    model: gpt-4.1-mini-2025-04-14
+    apiKey: ${{ secrets.GPT_API_KEY }}
+    # Các role mà model được phép đảm nhiệm
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+      - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+#      googleApiKeyEnvVar: GOOGLE_API_KEY
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: true  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+  - name: Groq Llama 3.3 70B
+    provider: groq
+    model: llama-3.3-70b-versatile
+    apiKey: ${{ secrets.GROQ_API_KEY }}
+        # Các role cần thiết
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+      - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: true  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+
+    defaultCompletionOptions:
+      contextLength: 131072
+      maxTokens: 32768
+    # Giới hạn max tokens output
+#    maxCompletionTokens: 1024  # hoặc nhỏ hơn, tuỳ model
+#    maxCompletionTokens: 2048   # 1024 hơi bí, 2048 hợp lý hơn
+#    maxCompletionTokens: 8192   # 1024 hơi bí, 2048 hợp lý hơn
+#
+#    # Giới hạn context input (history + prompt)
+#    maxContextTokens: 32700     # 32k là điểm cân bằng tốt
+#    maxTokens: 32760
+
+#    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+#    defaultCompletionOptions:
+#      temperature: 0.5
+#      top_p: 0.9
+#      top_k: 40
+#      contextLength: 262144
+#      maxTokens: 65536
+
+
+#    autocompleteOptions:
+#      debounceDelay: 350
+#      maxPromptTokens: 1536     # 1024 hơi ít cho file dài
+#      onlyMyCode: true
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+
+  - name: Qwen3 Coder 480B (DashScope)
+    provider: openai
+    model: qwen3-coder-480b-a35b-instruct
+    apiKey: ${{ secrets.DASHSCOPE_API_KEY }}
+    apiBase: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # Các role mà model được phép đảm nhiệm
+    # Các role cần thiết
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+      - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: true  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      maxTokens: 65536
+#
+#    autocompleteOptions:
+#      debounceDelay: 350
+#      maxPromptTokens: 1536     # 1024 hơi ít cho file dài
+#      onlyMyCode: true
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+
+  - name: Qwen3 Coder 30B (DashScope)
+    provider: openai
+    model: qwen3-coder-30b-a3b-instruct
+    apiKey: ${{ secrets.DASHSCOPE_API_KEY }}
+    apiBase: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # Các role mà model được phép đảm nhiệm
+    # Các role cần thiết
+# Định nghĩa các vai trò mà model này sẽ đảm nhiệm
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+     # - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+#      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: false  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      contextLength: 262144
+      maxTokens: 32768
+
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+      - provider: file
+
+  - name: Qwen3 Max (DashScope)
+    provider: openai
+    model: qwen3-max
+    apiKey: ${{ secrets.DASHSCOPE_API_KEY }}
+    apiBase: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # Các role mà model được phép đảm nhiệm
+    # Các role cần thiết
+# Định nghĩa các vai trò mà model này sẽ đảm nhiệm
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+     # - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+#      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: false  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      contextLength: 262144
+      maxTokens: 32768
+
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+      - provider: file
+
+  - name: Qwen Max (DashScope)
+    provider: openai
+    model: qwen-max
+    apiKey: ${{ secrets.DASHSCOPE_API_KEY }}
+    apiBase: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    # Các role mà model được phép đảm nhiệm
+    # Các role cần thiết
+# Định nghĩa các vai trò mà model này sẽ đảm nhiệm
+    roles:
+      - chat       # hội thoại
+      - edit       # chỉnh sửa file trong IDE
+      - apply      # áp dụng thay đổi
+     # - autocomplete  # gợi ý/auto-complete (thường Hub preset)
+    #      - explain   # giải thích code, logic (tuỳ chọn nhưng hay dùng)
+
+    # Capabilities cho phép model sử dụng tools và truy cập môi trường
+    capabilities:
+#      - tool_use         # gọi MCP server hoặc external tool
+      - file_access      # đọc/ghi file
+      - project_access   # truy cập workspace/project
+      - edit_code        # chỉnh sửa trực tiếp code
+      - autocomplete     # autocomplete/IDE integration
+    env:
+      useLegacyCompletionsEndpoint: false
+
+    # Tuỳ chọn bổ sung để IDE biết hỗ trợ edit tools
+    edit:
+      enabled: true       # bật tính năng edit (Ctrl+I)
+      allowExternalTools: false  # cho phép gọi tools MCP
+      maxConcurrentTools: 5      # số tool có thể gọi đồng thời
+
+    # Tool policies (bảo đảm có quyền chạy tự động như Hub)
+    toolPolicies:
+      default: automatic    # Ask First / Automatic / Excluded
+
+    contextTrimStrategy: oldest-first  # cắt message cũ nhất trước
+    defaultCompletionOptions:
+      contextLength: 30720
+      maxTokens: 8192
+
+    context:
+      - provider: code
+      - provider: docs
+      - provider: diff
+      - provider: terminal
+      - provider: problems
+      - provider: folder
+      - provider: codebase
+      - provider: file

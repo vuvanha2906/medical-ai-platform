@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical AI Research Platform</title>
+    <!-- Include Google Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Include Tailwind CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Top Navigation Bar -->
+    <nav class="bg-slate-900 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Medical AI Research Platform</h1>
+            <div class="space-x-4">
+                <a href="{% url 'dashboard' %}" class="hover:underline">Dashboard</a>
+                <a href="{% url 'xray_analysis' %}" class="hover:underline">X-ray Analysis</a>
+                <a href="{% url 'mri_alzheimer' %}" class="hover:underline">MRI Alzheimer</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="container mx-auto py-8">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer (Optional) -->
+    <footer class="bg-slate-900 text-white p-4 text-center">
+        <p>&copy; 2023 Medical AI Research Platform. All rights reserved.</p>
+    </footer>
+</body>
+</html>

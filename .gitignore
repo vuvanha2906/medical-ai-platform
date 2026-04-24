@@ -1,0 +1,23 @@
+# Môi trường ảo Python
+.venv/
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database cục bộ
+db.sqlite3
+
+# Thư mục chứa ảnh người dùng upload (Bảo mật y tế)
+media/
+uploads/
+
+# Cấu hình IDE
+.idea/
+.vscode/
+
+# Biến môi trường
+.env
