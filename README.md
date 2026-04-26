@@ -1,11 +1,12 @@
 # Medical AI Platform
 
 Web-based Medical Image Diagnosis using Deep Learning  
-**X-ray Lung Pathology** · **Alzheimer MRI Classification** · **Explainable AI (Grad-CAM)**
+**X-ray Lung Pathology** • **Alzheimer MRI Classification** • **Explainable AI (Grad-CAM)**
 
 ---
 
 ## Tech stack
+
 
 | Layer | Library |
 |---|---|
@@ -20,49 +21,94 @@ Web-based Medical Image Diagnosis using Deep Learning
 
 ## Quickstart (uv)
 
-### 1. Install uv (nếu chưa có)
+Dự án sử dụng `uv` để quản lý Python và các thư viện một cách nhanh nhất.
 
-```
+### 1. Cài đặt `uv`
 
-### 4. Cài PyTorch (CPU — dev)
+*   **Trên Ubuntu (Linux):**
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Sau đó chạy lệnh dưới để cập nhật PATH (hoặc khởi động lại terminal)
+    source $HOME/.cargo/env
+    ```
+*   **Trên Windows:**
+    Mở PowerShell và chạy:
+    ```powershell
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
 
+### 2. Khởi tạo Python và Môi trường ảo
+
+`uv` sẽ tự động tải phiên bản Python phù hợp (ví dụ Python 3.12) và tạo môi trường ảo `.venv`.
+
+*   **Trên Ubuntu:**
+    ```bash
+    uv venv
+    source .venv/bin/activate
+    ```
+*   **Trên Windows (PowerShell):**
+    ```powershell
+    uv venv
+    .venv\Scripts\Activate.ps1
+    ```
+
+### 3. Cài đặt Dependencies
+
+`uv` hỗ trợ đồng bộ hóa cực nhanh tất cả thư viện từ tệp `pyproject.toml` hoặc `uv.lock`.
 ```bash
-uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+uv sync
 ```
 
-> **GPU (training thật):** thay `cpu` bằng `cu121` hoặc `cu118` tuỳ CUDA version:
-> ```bash
-> uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-> ```
-> Kiểm tra CUDA version: `nvcc --version` hoặc `nvidia-smi`
+### 4. Cài đặt PyTorch (Tùy chọn CPU / GPU)
+
+Vì PyTorch quản lý wheel ở các index riêng, cách tốt nhất với `uv` là cài đặt kèm cờ `--index-url`.
+
+*   **Môi trường CPU (Phục vụ dev hoặc máy không có GPU):**
+    ```bash
+    uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    ```
+
+*   **Môi trường GPU (Training thật):**
+    Kiểm tra phiên bản CUDA bằng lệnh `nvidia-smi` hoặc `nvcc --version` và chọn index phù hợp (Ví dụ CUDA 12.1 sử dụng `cu121`):
+    ```bash
+    uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    ```
 
 ### 5. Cấu hình môi trường
 
-```bash
-cp .env.example .env
-# Chỉnh sửa .env: DATABASE_URL, REDIS_URL, SECRET_KEY...
-```
+Sao chép file cấu hình mẫu và điền các thông số cần thiết (Database URL, Redis URL...):
+*   **Trên Ubuntu:** `cp .env.example .env`
+*   **Trên Windows:** `copy .env.example .env`
 
-### 6. Chạy services (Docker)
+### 6. Chạy các dịch vụ (Docker)
 
+Đảm bảo bạn đã cài đặt Docker và Docker Compose. Khởi chạy cơ sở dữ liệu và Redis:
 ```bash
 docker compose up -d postgres redis
 ```
 
-### 7. Migrate & chạy server
+### 7. Migrate & Chạy Server
 
+Cập nhật cấu trúc database và khởi tạo tài khoản quản trị:
 ```bash
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
+python backend/manage.py migrate
+python backend/manage.py createsuperuser
+python backend/manage.py runserver
 ```
 
-### 8. Chạy Celery worker (terminal riêng)
+### 8. Chạy Celery worker (Mở terminal riêng)
 
-```bash
-celery -A config worker -l info
-celery -A config beat -l info    # scheduler (optional)
-```
+Chuyển hướng vào thư mục chứa file `manage.py` và chạy lệnh sau để xử lý hàng đợi tác vụ AI:
+
+*   **Trên Ubuntu:**
+    ```bash
+    celery -A config worker -l info
+    ```
+*   **Trên Windows:**
+    *(Celery trên Windows cần thêm cờ `--pool=solo` hoặc `--pool=gevent` để hoạt động ổn định)*
+    ```bash
+    celery -A config worker -l info --pool=solo
+    ```
 
 ---
 
@@ -99,7 +145,6 @@ medical_ai_platform/
 ├── frontend/               ← Django templates + static
 └── tests/
 ```
-
 ---
 
 ## Datasets
