@@ -1,16 +1,23 @@
 import torch
-import torchvision.transforms as transforms
-from PIL import Image
+import torch.nn.functional as F
+from torchvision import transforms
 from torchvision.models import densenet121
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from PIL import Image
+import numpy as np
 from typing import Dict
+
 
 class XrayPredictor:
     def __init__(self):
-        # Load the pretrained DenseNet121 model and set it to evaluation mode
-        self.model = densenet121(pretrained=True)
+        # Load the pre-trained DenseNet121 model
+        self.model = densenet121(weights='IMAGENET1K_V1')
         self.model.eval()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
 
-        # Define the standard validation transforms
+        # Define the transformation pipeline
         self.transform = transforms.Compose([
             transforms.Resize(224),
             transforms.CenterCrop(224),
@@ -18,49 +25,47 @@ class XrayPredictor:
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
-    def predict(self, image_path: str) -> Dict[str, float]:
-        """
-        Predicts the top 3 ImageNet classes for the given X-ray image.
+        # Initialize Grad-CAM
+        # The last layer of densenet121.features is the final convolutional block.
+        self.grad_cam = GradCAM(model=self.model, target_layers=[self.model.features[-1]])
 
-        Args:
-            image_path (str): Path to the input image.
+    def preprocess_image(self, image_path: str) -> torch.Tensor:
+        """Preprocess the image for inference."""
+        with Image.open(image_path).convert('RGB') as img:
+            return self.transform(img).unsqueeze(0).to(self.device)
 
-        Returns:
-            Dict[str, float]: A dictionary of the top 3 class names and their probabilities.
-        """
-        # Open the image using PIL
-        image = Image.open(image_path).convert('RGB')
-
-        # Apply the standard validation transforms
-        image_tensor = self.transform(image)
-
-        # Add a batch dimension
-        image_tensor = image_tensor.unsqueeze(0)
-
-        # Run the image through the model
+    def predict(self, image_path: str) -> dict:
+        """Predict the probabilities of the classes for the given image."""
         with torch.no_grad():
-            output = self.model(image_tensor)
+            input_tensor = self.preprocess_image(image_path)
+            output = self.model(input_tensor)
+            probabilities = F.softmax(output, dim=1)
+            _, predicted_idx = torch.max(probabilities, 1)
+            predicted_class = predicted_idx.item()
+            class_probabilities = {str(i): prob.item() for i, prob in enumerate(probabilities[0])}
 
-        # Get the top 3 predictions
-        _, indices = torch.topk(output, k=3)
-        probabilities = torch.nn.functional.softmax(output, dim=1)[0]
+        return {
+            'predicted_class': predicted_class,
+            'probabilities': class_probabilities
+        }
 
-        # Map the indices to class names and probabilities
-        with open("imagenet_classes.txt") as f:
-            classes = [line.strip() for line in f.readlines()]
 
-        top_predictions = {classes[idx]: probabilities[idx].item() for idx in indices[0]}
+def generate_heatmap(self, image_path: str, output_path: str) -> None:
+    """Generate and save the Grad-CAM heatmap for the given image."""
+    input_tensor = self.preprocess_image(image_path)
+    target_category = None  # Use the predicted class by default
 
-        return top_predictions
+    # Generate the Grad-CAM heatmap
+    grayscale_cam = self.grad_cam(input_tensor=input_tensor, target_category=target_category)
+    grayscale_cam = grayscale_cam[0, :]
 
-    def generate_gradcam(self, image_tensor: torch.Tensor) -> None:
-        """
-        Placeholder method to generate Grad-CAM heatmaps.
+    # Convert the input tensor back to a NumPy array
+    input_image = input_tensor.squeeze(0).cpu().numpy().transpose(1, 2, 0)
+    input_image = (input_image * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]) * 255
+    input_image = np.clip(input_image, 0, 255).astype(np.uint8)
 
-        Args:
-            image_tensor (torch.Tensor): The input image tensor.
+    # Overlay the heatmap on the input image
+    cam_image = show_cam_on_image(input_image, grayscale_cam, use_rgb=True)
 
-        Returns:
-            None: This method will be implemented later.
-        """
-        return None
+    # Save the heatmap
+    Image.fromarray(cam_image).save(output_path)

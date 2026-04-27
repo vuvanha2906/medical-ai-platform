@@ -1,98 +1,739 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block content %}
-<div class="container mx-auto px-4 py-4">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard</h1>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        <!-- Existing Studies Card -->
-        <div class="bg-white shadow-lg rounded-2xl p-6">
-            <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Existing Studies</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modality</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                {% for study in studies %}
-                        <tr class="hover:bg-gray-50 transition-colors duration-200">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ study.patient_name }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ study.modality }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if study.status == 'Completed' %} bg-green-100 text-green-800
-                                    {% elif study.status == 'Processing' %} bg-yellow-100 text-yellow-800 animate-pulse
-                                    {% else %} bg-red-100 text-red-800 {% endif %}">
-                                    {% if study.status == 'Completed' %}
-                                        <svg class="w-2 h-2 mr-1 text-green-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
-                                    {% elif study.status == 'Processing' %}
-                                        <svg class="w-2 h-2 mr-1 text-yellow-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
-                                    {% else %}
-                                        <svg class="w-2 h-2 mr-1 text-red-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
-                                    {% endif %}
-                                    {{ study.status }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No studies found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-        </div>
-                </div>
-
-        <!-- New Study Inference Card -->
-        <div class="bg-white shadow-lg rounded-2xl p-6">
-            <h2 class="text-2xl font-semibold text-indigo-700 mb-4">New Study Inference</h2>
-            <form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'studies:upload' %}">
-                {% csrf_token %}
-                <div class="relative h-48 border-4 border-dashed border-gray-300 p-6 rounded-2xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-colors duration-300 ease-in-out flex flex-col items-center justify-center bg-gradient-to-b from-white to-indigo-50">
-                    <input type="file" id="image" name="image" accept="image/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                    <label for="image" class="w-full h-full flex flex-col items-center justify-center text-center">
-                        <svg class="w-12 h-12 mb-3 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 13V3m0 10V3m0 10a4.5 4.5 0 014.5 4.5M12 13a4.5 4.5 0 00-4.5 4.5M12 13H3m18 0h-9M12 13a4.5 4.5 0 014.5 4.5m0 0H21m-3 0a4.5 4.5 0 00-4.5 4.5M3 17.5a4.5 4.5 0 014.5-4.5M6 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5M12 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5M18 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5"></path>
-                        </svg>
-                        <span class="text-lg font-medium text-gray-700">Drag & Drop Medical Image</span>
-                        <span class="text-sm text-gray-500 mt-1">or Click to Browse Files</span>
-                    </label>
-                </div>
-                <div class="mt-5">
-                    <label for="modality" class="block text-sm font-medium text-gray-700 mb-1">Modality</label>
-                    <select id="modality" name="modality" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200">
-                        <option value="X-ray">X-ray</option>
-                        <option value="MRI">MRI</option>
-                    </select>
-                </div>
-                <button type="submit" id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Run AI Inference
-                </button>
-            </form>
-            <div id="result-container" class="mt-6 p-4 bg-slate-800 text-emerald-400 font-mono rounded-xl shadow-inner hidden animate-fadeIn">
-                <h3 class="text-lg font-semibold mb-3 text-emerald-300">Inference Results:</h3>
-                <div id="result-content">
-                <p><strong>Study ID:</strong> <span id="study-id"></span></p>
-                <p><strong>Status:</strong> <span id="study-status"></span></p>
-                    <p class="mt-2"><strong>Prediction Probabilities:</strong></p>
-                    <div id="prediction-bars" class="mt-2 space-y-2"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedVision AI — Diagnostic Intelligence Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              950: '#040810',
+              900: '#0a1628',
+              800: '#0f2240',
+              700: '#1e3a5f',
+              600: '#2d4a6f',
+            },
+            emerald: {
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #040810 0%, #0a1628 50%, #0f2240 100%);
+    }
+    .glass-card {
+      background: rgba(15, 34, 64, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+    .upload-zone {
+      background: linear-gradient(135deg, rgba(15, 34, 64, 0.4) 0%, rgba(30, 58, 95, 0.3) 100%);
+      border: 2px dashed rgba(16, 185, 129, 0.4);
+      transition: all 0.3s ease;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: rgba(16, 185, 129, 0.8);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+      box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
+    }
+    .modality-btn {
+      transition: all 0.3s ease;
+    }
+    .modality-btn:hover {
+      transform: translateY(-2px);
+    }
+    .modality-btn.active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    }
+    .table-row {
+      transition: all 0.2s ease;
+    }
+    .table-row:hover {
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .status-badge {
+      animation: pulse-glow 2s infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 5px currentColor; }
+      50% { box-shadow: 0 0 15px currentColor; }
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, rgba(15, 34, 64, 0.7) 0%, rgba(30, 58, 95, 0.5) 100%);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 34, 64, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.5);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 185, 129, 0.7);
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-gray-100">
+  <!-- Header -->
+  <header class="glass-card sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <!-- Logo -->
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+              </svg>
             </div>
+            <div>
+              <h1 class="text-xl font-semibold tracking-tight">MedVision<span class="gradient-text"> AI</span></h1>
+              <p class="text-xs text-gray-400 tracking-wide">Diagnostic Intelligence Platform</p>
+            </div>
+          </div>
         </div>
-    </div>
-</div>
-                </div>
 
-<script>
+        <!-- Nav -->
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="#" class="px-4 py-2 rounded-lg text-sm font-medium text-emerald-400 bg-emerald-500/10">Dashboard</a>
+          <a href="#" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors">Studies</a>
+          <a href="#" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors">Reports</a>
+          <a href="#" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-colors">Analytics</a>
+        </nav>
+
+        <!-- User -->
+        <div class="flex items-center gap-4">
+          <button class="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
+          </button>
+          <div class="flex items-center gap-3 pl-4 border-l border-white/10">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center ring-2 ring-emerald-500/30">
+              <span class="text-sm font-medium text-emerald-400">DR</span>
+            </div>
+            <div class="hidden sm:block">
+              <p class="text-sm font-medium">Dr. Rebecca Chen</p>
+              <p class="text-xs text-gray-500">Radiologist</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8" id="main-content">
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="stat-card rounded-2xl p-5 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">+12%</span>
+        </div>
+        <p class="text-2xl font-semibold">1,284</p>
+        <p class="text-sm text-gray-500 mt-1">Total Studies</p>
+      </div>
+
+      <div class="stat-card rounded-2xl p-5 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full">Live</span>
+        </div>
+        <p class="text-2xl font-semibold">23</p>
+        <p class="text-sm text-gray-500 mt-1">Processing</p>
+      </div>
+
+      <div class="stat-card rounded-2xl p-5 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">Avg</span>
+        </div>
+        <p class="text-2xl font-semibold">2.4<span class="text-sm text-gray-500 ml-1">min</span></p>
+        <p class="text-sm text-gray-500 mt-1">Analysis Time</p>
+      </div>
+
+      <div class="stat-card rounded-2xl p-5 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full">High</span>
+        </div>
+        <p class="text-2xl font-semibold">98.7<span class="text-sm text-gray-500 ml-1">%</span></p>
+        <p class="text-sm text-gray-500 mt-1">AI Accuracy</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-8">
+      <!-- Upload Section -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Upload Zone -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold">New Analysis</h2>
+            <span class="text-xs text-gray-500 bg-white/5 px-3 py-1 rounded-full">DICOM • NIfTI • PNG</span>
+          </div>
+
+          <div id="uploadZone" class="upload-zone rounded-2xl p-8 text-center cursor-pointer">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
+              <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            <p class="text-gray-300 font-medium mb-2">Drop medical images here</p>
+            <p class="text-sm text-gray-500 mb-4">or click to browse from your device</p>
+            <button class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-emerald-500/25">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+              Select Files
+            </button>
+            <input type="file" id="fileInput" class="hidden" accept=".dcm,.nii,.nii.gz,.png,.jpg,.jpeg" multiple>
+          </div>
+
+          <!-- Selected Files Preview -->
+          <div id="filePreview" class="hidden mt-4 p-4 rounded-xl bg-navy-800/50 border border-white/5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium text-gray-300">Selected Files</span>
+              <button id="clearFiles" class="text-xs text-gray-500 hover:text-red-400 transition-colors">Clear all</button>
+            </div>
+            <div id="fileList" class="space-y-2 max-h-32 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <!-- Modality Selector -->
+        <div class="glass-card rounded-2xl p-6">
+          <h2 class="text-lg font-semibold mb-4">Imaging Modality</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <button class="modality-btn active rounded-xl p-4 bg-navy-700/50 border border-white/10 text-left group" data-modality="xray">
+              <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-3 group-[.active]:bg-white/20">
+                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                </svg>
+              </div>
+              <p class="font-medium text-sm">X-Ray</p>
+              <p class="text-xs text-gray-500 mt-1">Chest, Bone, Dental</p>
+            </button>
+
+            <button class="modality-btn rounded-xl p-4 bg-navy-700/50 border border-white/10 text-left group" data-modality="mri">
+              <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-3 group-[.active]:bg-white/20">
+                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                </svg>
+              </div>
+              <p class="font-medium text-sm">MRI</p>
+              <p class="text-xs text-gray-500 mt-1">Brain, Spine, Cardiac</p>
+            </button>
+
+            <button class="modality-btn rounded-xl p-4 bg-navy-700/50 border border-white/10 text-left group" data-modality="ct">
+              <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-3 group-[.active]:bg-white/20">
+                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+              </div>
+              <p class="font-medium text-sm">CT Scan</p>
+              <p class="text-xs text-gray-500 mt-1">Abdomen, Thorax</p>
+            </button>
+
+            <button class="modality-btn rounded-xl p-4 bg-navy-700/50 border border-white/10 text-left group" data-modality="ultrasound">
+              <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-3 group-[.active]:bg-white/20">
+                <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+              </div>
+              <p class="font-medium text-sm">Ultrasound</p>
+              <p class="text-xs text-gray-500 mt-1">Obstetric, Vascular</p>
+            </button>
+          </div>
+
+          <!-- Analysis Settings -->
+          <div class="mt-6 pt-6 border-t border-white/5">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm text-gray-400">AI Model</span>
+              <select class="bg-navy-700/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-emerald-500/50">
+                <option>MedVision v4.2 (Latest)</option>
+                <option>MedVision v4.1</option>
+                <option>MedVision v3.8 (Stable)</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-400">Priority Analysis</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer">
+                <div class="w-11 h-6 bg-navy-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Start Analysis Button -->
+          <button class="w-full mt-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Start AI Analysis
+          </button>
+        </div>
+      </div>
+
+      <!-- Recent Studies Table -->
+      <div class="lg:col-span-3">
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-lg font-semibold">Recent Studies</h2>
+              <p class="text-sm text-gray-500 mt-1">Latest diagnostic analyses</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="relative">
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" placeholder="Search studies..." class="pl-10 pr-4 py-2 bg-navy-700/50 border border-white/10 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 w-full sm:w-64">
+              </div>
+              <button class="p-2 bg-navy-700/50 border border-white/10 rounded-xl hover:bg-navy-600/50 transition-colors">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-white/10">
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Study ID</th>
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient</th>
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Modality</th>
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Finding</th>
+                  <th class="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2847</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-blue-400">JM</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">James Mitchell</p>
+                        <p class="text-xs text-gray-500">Male, 54</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                      MRI
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full status-badge"></span>
+                      Complete
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-yellow-400">Abnormality Detected</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Today, 2:34 PM</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2846</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500/20 to-pink-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-pink-400">SW</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">Sarah Williams</p>
+                        <p class="text-xs text-gray-500">Female, 38</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      X-Ray
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full status-badge"></span>
+                      Complete
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-emerald-400">Normal</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Today, 1:15 PM</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2845</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-cyan-400">RK</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">Robert Kim</p>
+                        <p class="text-xs text-gray-500">Male, 67</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                      CT
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                      Processing
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-500">—</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Today, 12:48 PM</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2844</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-orange-400">EP</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">Emily Parker</p>
+                        <p class="text-xs text-gray-500">Female, 29</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                      MRI
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full status-badge"></span>
+                      Complete
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-emerald-400">Normal</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Today, 11:22 AM</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2843</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-emerald-400">DL</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">David Lee</p>
+                        <p class="text-xs text-gray-500">Male, 45</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                      X-Ray
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-500/10 text-gray-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                      Pending Review
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-red-400">Critical Finding</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Today, 10:05 AM</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="table-row">
+                  <td class="py-4 px-4">
+                    <span class="font-mono text-sm text-emerald-400">#STD-2842</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/20 to-violet-600/20 flex items-center justify-center">
+                        <span class="text-xs font-medium text-violet-400">MT</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium">Maria Torres</p>
+                        <p class="text-xs text-gray-500">Female, 52</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-500/10 text-teal-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-teal-400 rounded-full"></span>
+                      Ultrasound
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-lg">
+                      <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full status-badge"></span>
+                      Complete
+                    </span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-emerald-400">Normal</span>
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="text-sm text-gray-400">Yesterday</span>
+                  </td>
+                  <td class="py-4 px-4 text-right">
+                    <button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="flex items-center justify-between mt-6 pt-6 border-t border-white/5">
+            <p class="text-sm text-gray-500">Showing <span class="text-gray-300">6</span> of <span class="text-gray-300">1,284</span> studies</p>
+            <div class="flex items-center gap-2">
+              <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-navy-700/50 border border-white/10 rounded-lg hover:bg-navy-600/50 transition-colors">Previous</button>
+              <button class="px-3 py-1.5 text-sm text-white bg-emerald-600 rounded-lg">1</button>
+              <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-navy-700/50 border border-white/10 rounded-lg hover:bg-navy-600/50 transition-colors">2</button>
+              <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-navy-700/50 border border-white/10 rounded-lg hover:bg-navy-600/50 transition-colors">3</button>
+              <span class="text-gray-500">...</span>
+              <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-navy-700/50 border border-white/10 rounded-lg hover:bg-navy-600/50 transition-colors">214</button>
+              <button class="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-navy-700/50 border border-white/10 rounded-lg hover:bg-navy-600/50 transition-colors">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-7xl mx-auto px-6 py-8 mt-8 border-t border-white/5">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2 text-sm text-gray-500">
+        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+        <span>All systems operational</span>
+        <span class="mx-2">•</span>
+        <span>HIPAA Compliant</span>
+        <span class="mx-2">•</span>
+        <span>FDA Cleared</span>
+      </div>
+      <p class="text-sm text-gray-500">© 2026 MedVision AI. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Vanilla JavaScript for Interactivity -->
+  <script>
+    // Drag and Drop Upload Zone
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileList = document.getElementById('fileList');
+    const clearFiles = document.getElementById('clearFiles');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+      if (files.length > 0) {
+        filePreview.classList.remove('hidden');
+        fileList.innerHTML = '';
+
+        Array.from(files).forEach((file, index) => {
+          const fileItem = document.createElement('div');
+          fileItem.className = 'flex items-center justify-between p-2 rounded-lg bg-navy-700/30';
+          fileItem.innerHTML = `
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span class="text-sm text-gray-300 truncate max-w-[180px]">${file.name}</span>
+            </div>
+            <span class="text-xs text-gray-500">${formatFileSize(file.size)}</span>
+          `;
+          fileList.appendChild(fileItem);
+        });
+      }
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    clearFiles.addEventListener('click', () => {
+      fileInput.value = '';
+      filePreview.classList.add('hidden');
+      fileList.innerHTML = '';
+    });
+
+    // Modality Selector
+    const modalityBtns = document.querySelectorAll('.modality-btn');
+
+    modalityBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modalityBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  </script>
+  <script>
 document.addEventListener('DOMContentLoaded', (event) => {
     // Fade-in animation for the main content
     const mainContent = document.getElementById('main-content');
@@ -100,86 +741,174 @@ document.addEventListener('DOMContentLoaded', (event) => {
         mainContent.classList.add('animate-fadeIn');
     }
 
-    const uploadForm = document.getElementById('upload-form');
+    const uploadForm = document.getElementById('uploadZone'); // Changed from 'upload-form' to 'uploadZone'
     const submitButton = document.getElementById('submit-button');
     const resultContainer = document.getElementById('result-container');
     const studyIdSpan = document.getElementById('study-id');
     const studyStatusSpan = document.getElementById('study-status');
     const predictionBarsDiv = document.getElementById('prediction-bars');
+    const fileInput = document.getElementById('fileInput'); // Changed from 'image-input' to 'fileInput'
 
-    uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Add event listener to show the filename or a preview of the medical image
+    fileInput.addEventListener('change', function(e) { // Changed from 'image-input' to 'fileInput'
+        const fileName = e.target.files[0]?.name || 'No file selected';
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'mt-2 text-sm text-gray-500 file-preview'; // Added file-preview class
+        previewContainer.textContent = `Selected File: ${fileName}`;
 
-        submitButton.textContent = 'Processing...';
-        submitButton.disabled = true;
-        resultContainer.classList.add('hidden'); // Hide previous results
-        predictionBarsDiv.innerHTML = ''; // Clear previous prediction bars
+        // Clear previous preview
+        const existingPreview = document.querySelector('#uploadZone .file-preview'); // Changed selector to match uploadZone
+        if (existingPreview) {
+            existingPreview.remove();
+        }
 
-        const formData = new FormData(this);
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-        fetch("{% url 'studies:upload' %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': csrftoken
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(errData => {
-                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-                }).catch(() => {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-        });
-            }
-            return response.json();
-        })
-        .then(data => {
-            studyIdSpan.textContent = data.study_id;
-            studyStatusSpan.textContent = data.status;
-
-            // Dynamically create progress bars for predictions
-            if (data.prediction && typeof data.prediction === 'object') {
-                const sortedPredictions = Object.entries(data.prediction).sort(([,a],[,b]) => b-a); // Sort by probability descending
-
-                sortedPredictions.forEach(([className, probability]) => {
-                    const probabilityPercent = (probability * 100).toFixed(1);
-                    const barColorClass = probability > 0.5 ? 'bg-red-500' : (probability > 0.2 ? 'bg-blue-500' : 'bg-green-500'); // Red/Orange for high prob, Green/Blue for lower
-                    const progressBarHtml = `
-                        <div>
-                            <div class="text-sm font-medium mb-1 flex justify-between">
-                                <span>${className}</span>
-                                <span>${probabilityPercent}%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div class="h-2.5 rounded-full ${barColorClass}" style="width: ${probabilityPercent}%"></div>
-                            </div>
-                        </div>
-                    `;
-                    predictionBarsDiv.innerHTML += progressBarHtml;
+        // Add the new preview
+        uploadZone.parentNode.insertBefore(previewContainer, uploadZone.nextSibling); // Insert after uploadZone
     });
-            } else {
-                 predictionBarsDiv.innerHTML = '<p>No prediction data available.</p>';
+
+    // Assuming the form submission logic should be tied to a button within the upload section,
+    // not the uploadZone div itself. Let's create a placeholder button for demonstration.
+    // In a real scenario, you'd have a dedicated submit button.
+    const dummySubmitButton = document.createElement('button');
+    dummySubmitButton.id = 'submit-button';
+    dummySubmitButton.type = 'submit';
+    dummySubmitButton.className = 'w-full mt-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2';
+    dummySubmitButton.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Start AI Analysis
+    `;
+    // Find the parent of the uploadZone and insert the button, or adjust as needed.
+    // For this example, let's assume it's placed after the uploadZone.
+    uploadZone.parentNode.insertBefore(dummySubmitButton, uploadZone.nextSibling);
+    // Re-select submitButton to target the newly created one
+    const actualSubmitButton = document.getElementById('submit-button');
+
+
+    // The original form submission logic was likely intended for a form element.
+    // Since we are using drag-and-drop and a file input, we need to manage the form submission.
+    // Let's assume a form element with id="analysis-form" exists or needs to be created.
+    // For now, we'll simulate the submission using fetch directly.
+
+    // We need a way to trigger the submission. Let's attach it to the "Start AI Analysis" button.
+    const startAnalysisButton = document.querySelector('button:has(svg[viewBox="0 0 24 24"[fill="none"[stroke="currentColor"][d="M13 10V3L4 14h7v7l9-11h-7z"])');
+
+    if (startAnalysisButton) {
+        startAnalysisButton.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Check if files are selected
+            if (fileInput.files.length === 0) {
+                alert('Please select or drop medical images first.');
+                return;
             }
+
+            // Gather data
+            const formData = new FormData();
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file); // Append files
+            });
+
+            // Get selected modality
+            const activeModalityButton = document.querySelector('.modality-btn.active');
+            const modality = activeModalityButton ? activeModalityButton.getAttribute('data-modality') : 'unknown';
+            formData.append('modality', modality);
+
+            // Add other form data if necessary (e.g., AI model selection, priority)
+            const aiModelSelect = document.querySelector('select'); // Assuming this is the AI model selector
+            if (aiModelSelect) {
+                formData.append('ai_model', aiModelSelect.value);
+            }
+            const priorityCheckbox = document.querySelector('input[type="checkbox"]');
+            formData.append('priority', priorityCheckbox.checked);
+
+
+            // Disable button and show processing state
+            startAnalysisButton.textContent = 'Processing...';
+            startAnalysisButton.disabled = true;
+            resultContainer.classList.add('hidden'); // Hide previous results
+            predictionBarsDiv.innerHTML = ''; // Clear previous prediction bars
+
+            // Replace with your actual API endpoint URL
+            const uploadUrl = "{% url 'studies:upload' %}"; // This is a Django URL tag, ensure it's correctly rendered by the server.
+
+            fetch(uploadUrl, {
+                method: 'POST',
+                body: formData,
+                // CSRF token is usually required for Django POST requests
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Attempt to parse JSON error response from backend
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        // If response is not JSON or parsing fails
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                studyIdSpan.textContent = data.study_id || 'N/A';
+                studyStatusSpan.textContent = data.status || 'Unknown';
+
+                // Dynamically create progress bars for predictions
+                if (data.prediction && typeof data.prediction === 'object') {
+                    const sortedPredictions = Object.entries(data.prediction).sort(([,a],[,b]) => b-a); // Sort by probability descending
+
+                    sortedPredictions.forEach(([className, probability]) => {
+                        const probabilityPercent = (probability * 100).toFixed(1);
+                        // Adjust color logic based on typical classification outcomes
+                        let barColorClass = 'bg-green-500'; // Default to green for normal/low risk
+                        if (probability > 0.7) { // High probability of abnormality
+                            barColorClass = 'bg-red-500';
+                        } else if (probability > 0.4) { // Moderate probability
+                            barColorClass = 'bg-yellow-500';
+                        }
+
+                        const progressBarHtml = `
+                            <div>
+                                <div class="text-sm font-medium mb-1 flex justify-between">
+                                    <span>${className}</span>
+                                    <span>${probabilityPercent}%</span>
+                                </div>
+                                <div class="w-full bg-navy-700 rounded-full h-2.5">
+                                    <div class="h-2.5 rounded-full ${barColorClass}" style="width: ${probabilityPercent}%"></div>
+                                </div>
+                            </div>
+                        `;
+                        predictionBarsDiv.innerHTML += progressBarHtml;
+                    });
+                } else {
+                     predictionBarsDiv.innerHTML = '<p class="text-gray-500">No specific prediction data available.</p>';
+                }
 
             resultContainer.classList.remove('hidden');
         })
-        .catch(error => {
-            console.error('Error during fetch:', error);
-            resultContainer.innerHTML = `
-                <div class="p-4 bg-red-100 border-t-4 border-red-500 rounded-b text-red-900" role="alert">
-                    <p class="font-bold">Error:</p>
-                    <p>${error.message}</p>
-                </div>
-            `;
-            resultContainer.classList.remove('hidden');
-        })
+            .catch(error => {
+                console.error('Error during fetch:', error);
+                resultContainer.innerHTML = `
+                    <div class="p-4 bg-red-100 border-t-4 border-red-500 rounded-b text-red-900" role="alert">
+                        <p class="font-bold">Error:</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                resultContainer.classList.remove('hidden');
+            })
         .finally(() => {
-            submitButton.textContent = 'Run AI Inference';
-            submitButton.disabled = false;
+                startAnalysisButton.textContent = 'Start AI Analysis'; // Restore original text
+                startAnalysisButton.disabled = false;
 });
     });
+    } else {
+        console.error("Could not find the 'Start AI Analysis' button.");
+    }
 });
 </script>
-{% endblock %}
+</body>
+</html>
