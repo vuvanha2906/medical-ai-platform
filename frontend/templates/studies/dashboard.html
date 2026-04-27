@@ -1,62 +1,185 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="container mx-auto py-8">
-    <div class="grid grid-cols-3 gap-4">
-        <!-- Column 1: New Study Inference -->
-        <div class="col-span-1 p-4 bg-white rounded-lg border-dashed border-2 border-gray-300 flex flex-col items-center justify-center">
-            <h2 class="text-xl font-bold mb-4">New Study Inference</h2>
-            <div class="flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p class="text-gray-500 mb-4">Drag & Drop or click to upload a medical image</p>
-                <input type="file" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
-                <div class="mt-4">
-                    <label for="modality" class="block text-sm font-medium text-gray-700">Modality</label>
-                    <select id="modality" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+<div class="container mx-auto px-4 py-4">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Dashboard</h1>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Existing Studies Card -->
+        <div class="bg-white shadow-lg rounded-2xl p-6">
+            <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Existing Studies</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modality</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                {% for study in studies %}
+                        <tr class="hover:bg-gray-50 transition-colors duration-200">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ study.patient_name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ study.modality }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if study.status == 'Completed' %} bg-green-100 text-green-800
+                                    {% elif study.status == 'Processing' %} bg-yellow-100 text-yellow-800 animate-pulse
+                                    {% else %} bg-red-100 text-red-800 {% endif %}">
+                                    {% if study.status == 'Completed' %}
+                                        <svg class="w-2 h-2 mr-1 text-green-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
+                                    {% elif study.status == 'Processing' %}
+                                        <svg class="w-2 h-2 mr-1 text-yellow-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
+                                    {% else %}
+                                        <svg class="w-2 h-2 mr-1 text-red-500" fill="current" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"></circle></svg>
+                                    {% endif %}
+                                    {{ study.status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">No studies found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+                </div>
+
+        <!-- New Study Inference Card -->
+        <div class="bg-white shadow-lg rounded-2xl p-6">
+            <h2 class="text-2xl font-semibold text-indigo-700 mb-4">New Study Inference</h2>
+            <form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'studies:upload' %}">
+                {% csrf_token %}
+                <div class="relative h-48 border-4 border-dashed border-gray-300 p-6 rounded-2xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-colors duration-300 ease-in-out flex flex-col items-center justify-center bg-gradient-to-b from-white to-indigo-50">
+                    <input type="file" id="image" name="image" accept="image/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <label for="image" class="w-full h-full flex flex-col items-center justify-center text-center">
+                        <svg class="w-12 h-12 mb-3 text-indigo-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 13V3m0 10V3m0 10a4.5 4.5 0 014.5 4.5M12 13a4.5 4.5 0 00-4.5 4.5M12 13H3m18 0h-9M12 13a4.5 4.5 0 014.5 4.5m0 0H21m-3 0a4.5 4.5 0 00-4.5 4.5M3 17.5a4.5 4.5 0 014.5-4.5M6 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5M12 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5M18 20.25v1.5m0-1.5v-1.5m0 1.5v1.5m0-1.5"></path>
+                        </svg>
+                        <span class="text-lg font-medium text-gray-700">Drag & Drop Medical Image</span>
+                        <span class="text-sm text-gray-500 mt-1">or Click to Browse Files</span>
+                    </label>
+                </div>
+                <div class="mt-5">
+                    <label for="modality" class="block text-sm font-medium text-gray-700 mb-1">Modality</label>
+                    <select id="modality" name="modality" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200">
                         <option value="X-ray">X-ray</option>
                         <option value="MRI">MRI</option>
                     </select>
                 </div>
-                <button class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Run AI Inference</button>
+                <button type="submit" id="submit-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Run AI Inference
+                </button>
+            </form>
+            <div id="result-container" class="mt-6 p-4 bg-slate-800 text-emerald-400 font-mono rounded-xl shadow-inner hidden animate-fadeIn">
+                <h3 class="text-lg font-semibold mb-3 text-emerald-300">Inference Results:</h3>
+                <div id="result-content">
+                <p><strong>Study ID:</strong> <span id="study-id"></span></p>
+                <p><strong>Status:</strong> <span id="study-status"></span></p>
+                    <p class="mt-2"><strong>Prediction Probabilities:</strong></p>
+                    <div id="prediction-bars" class="mt-2 space-y-2"></div>
             </div>
-        </div>
-
-        <!-- Column 2: Recent Inferences & Results -->
-        <div class="col-span-2 p-4 bg-white rounded-lg">
-            <h2 class="text-xl font-bold mb-4">Recent Inferences & Results</h2>
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Study ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modality</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">123e4567-e89b-12d3-a456-426614174000</td>
-                        <td class="px-6 py-4 whitespace-nowrap">X-ray</td>
-                        <td class="px-6 py-4 whitespace-nowrap">2023-10-01</td>
-                        <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span></td>
-                    </tr>
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">123e4567-e89b-12d3-a456-426614174001</td>
-                        <td class="px-6 py-4 whitespace-nowrap">MRI</td>
-                        <td class="px-6 py-4 whitespace-nowrap">2023-10-02</td>
-                        <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Processing</span></td>
-                    </tr>
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">123e4567-e89b-12d3-a456-426614174002</td>
-                        <td class="px-6 py-4 whitespace-nowrap">X-ray</td>
-                        <td class="px-6 py-4 whitespace-nowrap">2023-10-03</td>
-                        <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Failed</span></td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 </div>
+                </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    // Fade-in animation for the main content
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.classList.add('animate-fadeIn');
+    }
+
+    const uploadForm = document.getElementById('upload-form');
+    const submitButton = document.getElementById('submit-button');
+    const resultContainer = document.getElementById('result-container');
+    const studyIdSpan = document.getElementById('study-id');
+    const studyStatusSpan = document.getElementById('study-status');
+    const predictionBarsDiv = document.getElementById('prediction-bars');
+
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        submitButton.textContent = 'Processing...';
+        submitButton.disabled = true;
+        resultContainer.classList.add('hidden'); // Hide previous results
+        predictionBarsDiv.innerHTML = ''; // Clear previous prediction bars
+
+        const formData = new FormData(this);
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch("{% url 'studies:upload' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+        });
+            }
+            return response.json();
+        })
+        .then(data => {
+            studyIdSpan.textContent = data.study_id;
+            studyStatusSpan.textContent = data.status;
+
+            // Dynamically create progress bars for predictions
+            if (data.prediction && typeof data.prediction === 'object') {
+                const sortedPredictions = Object.entries(data.prediction).sort(([,a],[,b]) => b-a); // Sort by probability descending
+
+                sortedPredictions.forEach(([className, probability]) => {
+                    const probabilityPercent = (probability * 100).toFixed(1);
+                    const barColorClass = probability > 0.5 ? 'bg-red-500' : (probability > 0.2 ? 'bg-blue-500' : 'bg-green-500'); // Red/Orange for high prob, Green/Blue for lower
+                    const progressBarHtml = `
+                        <div>
+                            <div class="text-sm font-medium mb-1 flex justify-between">
+                                <span>${className}</span>
+                                <span>${probabilityPercent}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div class="h-2.5 rounded-full ${barColorClass}" style="width: ${probabilityPercent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    predictionBarsDiv.innerHTML += progressBarHtml;
+    });
+            } else {
+                 predictionBarsDiv.innerHTML = '<p>No prediction data available.</p>';
+            }
+
+            resultContainer.classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error during fetch:', error);
+            resultContainer.innerHTML = `
+                <div class="p-4 bg-red-100 border-t-4 border-red-500 rounded-b text-red-900" role="alert">
+                    <p class="font-bold">Error:</p>
+                    <p>${error.message}</p>
+                </div>
+            `;
+            resultContainer.classList.remove('hidden');
+        })
+        .finally(() => {
+            submitButton.textContent = 'Run AI Inference';
+            submitButton.disabled = false;
+});
+    });
+});
+</script>
 {% endblock %}

@@ -1,24 +1,37 @@
-import time
+import os
 from celery import shared_task
-from django.utils import timezone
-from apps.studies.models import Study, Prediction
-
+from django.apps import apps
+from ai_engine.xray.inference import XrayPredictor
 @shared_task
-def process_medical_image(study_id):
-    try:
-        study = Study.objects.get(id=study_id)
-        # Simulate AI processing time
-        time.sleep(3)
-        # Update the study status to 'Completed'
-        study.status = 'Completed'
-        study.save()
-        # Create a Prediction record
-        prediction = Prediction.objects.create(
+def process_medical_image(study_id: int):
+    # Import the Study and Prediction models
+    Study = apps.get_model('studies', 'Study')
+    Prediction = apps.get_model('studies', 'Prediction')
+
+    # Get the study instance
+    study = Study.objects.get(id=study_id)
+
+    # Check if the study has an uploaded image
+    if not study.image:
+        raise ValueError("No image uploaded for this study.")
+
+    # Get the image path
+    image_path = study.image.path
+
+    # Instantiate the XrayPredictor
+    predictor = XrayPredictor()
+
+    # Predict the top 3 classes
+    predictions = predictor.predict(image_path)
+
+    # Save the predictions to the Prediction model
+    prediction = Prediction(
             study=study,
-            inference_results={"Pneumonia": 0.85},
-            heatmap_image=None,
-            execution_time=timezone.now()
+        results=predictions,
+        heatmap_path=None  # Placeholder for future Grad-CAM heatmap
         )
-        print(f"Processed study {study_id} and created prediction {prediction.id}")
-    except Study.DoesNotExist:
-        print(f"Study with id {study_id} does not exist")
+    prediction.save()
+
+    # Mark the study as completed
+    study.status = 'Completed'
+    study.save()

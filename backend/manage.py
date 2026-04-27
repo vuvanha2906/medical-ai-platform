@@ -1,10 +1,17 @@
 #!/usr/bin/env python
+"""Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
+
 
 def main():
-    # Trỏ đúng vào file cấu hình của dự án chúng ta
+    """Run administrative tasks."""
+    root_path = Path(__file__).resolve().parent.parent
+    sys.path.append(str(root_path))
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.base')
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -15,6 +22,6 @@ def main():
         ) from exc
     execute_from_command_line(sys.argv)
 
-# KHÔNG ĐƯỢC THIẾU ĐOẠN NÀY:
+
 if __name__ == '__main__':
     main()

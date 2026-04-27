@@ -1,41 +1,118 @@
+<!-- frontend/templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical AI Research Platform</title>
-    <!-- Include Google Fonts -->
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Include Tailwind CSS via CDN -->
+    <title>Medical AI Platform</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        /* Basic fade-in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        /* Custom scrollbar for WebKit browsers */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5); /* slate-400 with transparency */
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(100, 116, 139, 0.8); /* slate-700 with transparency */
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Top Navigation Bar -->
-    <nav class="bg-slate-900 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">Medical AI Research Platform</h1>
-            <div class="space-x-4">
-                <a href="{% url 'dashboard' %}" class="hover:underline">Dashboard</a>
-                <a href="{% url 'xray_analysis' %}" class="hover:underline">X-ray Analysis</a>
-                <a href="{% url 'mri_alzheimer' %}" class="hover:underline">MRI Alzheimer</a>
-            </div>
+<body class="bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen flex">
+
+    <!-- Left Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 min-h-screen fixed left-0 top-0 p-5 flex flex-col z-40">
+        <div class="flex items-center mb-8">
+            <svg class="h-8 w-8 text-indigo-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.203-.576 2.287-1.5 3.001-.84.714-1.83 1.157-2.902 1.157-1.072 0-2.063-.443-2.902-1.157C3.576 13.287 3 12.203 3 11c0-2.761 2.239-5 5-5s5 2.239 5 5zM15 14a3 3 0 00-3 3v2h6v-2a3 3 0 00-3-3zM19 10a3 3 0 00-3 3v2h6v-2a3 3 0 00-3-3zM12 11c0 1.203-.576 2.287-1.5 3.001-.84.714-1.83 1.157-2.902 1.157-1.072 0-2.063-.443-2.902-1.157C3.576 13.287 3 12.203 3 11c0-2.761 2.239-5 5-5s5 2.239 5 5zM15 14a3 3 0 00-3 3v2h6v-2a3 3 0 00-3-3zM19 10a3 3 0 00-3 3v2h6v-2a3 3 0 00-3-3z"></path>
+            </svg>
+            <span class="text-2xl font-bold text-white">Medical AI Platform</span>
         </div>
-    </nav>
+        <nav class="flex-grow">
+            <ul>
+                <li>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors duration-200">
+                        <svg class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M4 7v10a2 2 0 002 2h12a2 2 0 002-2V7"></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors duration-200">
+                        <svg class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.21 18.593a7.473 7.473 0 001.795-1.03 7.473 7.473 0 001.03-1.795m0 0a4.524 4.524 0 00-1.795-1.03H7.5a4.524 4.524 0 00-1.795 1.03m0 0a7.473 7.473 0 00-1.03 1.795m0 0a4.524 4.524 0 001.03 1.795m0 0a7.473 7.473 0 001.795 1.03m0 0a4.524 4.524 0 001.795-1.03m0 0a7.473 7.473 0 001.03-1.795m0 0a4.524 4.524 0 00-1.03-1.795M6 18.75a3 3 0 11-6 0 3 3 0 016 0zM18 6a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        X-ray Analysis
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors duration-200">
+                        <svg class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1 1h16a1 1 0 011 1 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM7 10h10M7 14h10"></path>
+                        </svg>
+                        MRI Alzheimer
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="mt-auto pt-4">
+            <a href="#" class="flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors duration-200 text-red-400">
+                <svg class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </a>
+        </div>
+    </aside>
 
     <!-- Main Content Area -->
-    <div class="container mx-auto py-8">
-        {% block content %}{% endblock %}
-    </div>
+    <div class="flex-1 flex flex-col ml-64">
+        <header class="bg-white shadow-sm border-b border-gray-200 p-4 flex justify-between items-center z-30">
+            <h1 class="text-xl font-semibold text-gray-700">Workspace</h1>
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-500 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.5 1.5a2 2 0 01-2.53.378c-.59-.367-.89-.944-.89-1.566V17z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-5-5m0 0l5-5m-5 5h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 012-2z"></path>
+                    </svg>
+                </button>
+                <div class="relative">
+                    <input type="text" placeholder="Search..." class="border border-gray-300 rounded-full py-1 px-3 pl-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <svg class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-6a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <button class="text-gray-500 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.5 1.5a2 2 0 01-2.53.378c-.59-.367-.89-.944-.89-1.566V17z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-5-5m0 0l5-5m-5 5h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 012-2z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
 
-    <!-- Footer (Optional) -->
-    <footer class="bg-slate-900 text-white p-4 text-center">
-        <p>&copy; 2023 Medical AI Research Platform. All rights reserved.</p>
-    </footer>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50" id="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 </body>
 </html>
