@@ -16,20 +16,18 @@ STATUS_CHOICES = [
 ]
 
 class Study(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    anonymous_patient_info = models.CharField(max_length=255)
-    modality = models.CharField(max_length=10, choices=MODALITY_CHOICES)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
+    patient_name = models.CharField(max_length=100)
+    modality = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, default='Pending')
+    image = models.ImageField(upload_to='studies/')
 
     def __str__(self):
-        return f"Study {self.id} - {self.anonymous_patient_info} ({self.modality})"
+        return f"{self.patient_name} - {self.modality}"
 
 class Prediction(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    study = models.ForeignKey(Study, related_name='predictions', on_delete=models.CASCADE)
-    inference_results = models.JSONField()
-    heatmap_image = models.ImageField(upload_to='heatmaps/')
-    execution_time = models.DateTimeField(default=timezone.now)
+    study = models.OneToOneField(Study, on_delete=models.CASCADE, related_name='prediction')
+    results = models.JSONField()
+    heatmap_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
-        return f"Prediction {self.id} for Study {self.study.id}"
+        return f"Prediction for {self.study}"
