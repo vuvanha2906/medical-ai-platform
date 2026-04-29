@@ -223,43 +223,13 @@
             <svg class="w-24 h-24 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           </div>
           
-          <h3 class="text-lg font-semibold mb-4 text-emerald-400 flex items-center gap-2">
+          <h3 class="text-lg font-semibold mb-4 text-emerald-400 flex items-center gap-2 relative z-10">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Analysis Complete
+            Inference Results
           </h3>
-          
-          <div class="space-y-4 relative z-10">
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div class="bg-navy-800/50 p-3 rounded-lg border border-white/5">
-                <p class="text-gray-500 mb-1">Study ID</p>
-                <p class="font-mono text-emerald-400" id="study-id">---</p>
-              </div>
-              <div class="bg-navy-800/50 p-3 rounded-lg border border-white/5">
-                <p class="text-gray-500 mb-1">Status</p>
-                <p class="font-semibold text-gray-200" id="study-status">---</p>
-              </div>
-            </div>
 
-            <div>
-              <p class="text-sm text-gray-400 mb-3 font-medium">Prediction Probabilities:</p>
-              <div id="probability-chart" class="space-y-3"></div>
+          <div id="result-content" class="relative z-10">
             </div>
-
-            <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
-              <div>
-                <h4 class="text-xs font-semibold mb-2 text-gray-400 uppercase tracking-wider">Original</h4>
-                <div class="bg-navy-900 rounded-lg p-1 border border-white/5 aspect-square flex items-center justify-center overflow-hidden">
-                  <img id="original-image" src="" alt="Original Image" class="max-w-full max-h-full object-contain rounded">
-                </div>
-              </div>
-              <div>
-                <h4 class="text-xs font-semibold mb-2 text-emerald-400 uppercase tracking-wider">Heatmap</h4>
-                <div class="bg-navy-900 rounded-lg p-1 border border-white/5 aspect-square flex items-center justify-center overflow-hidden">
-                  <img id="heatmap-image" src="" alt="Heatmap" class="max-w-full max-h-full object-contain rounded">
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -299,7 +269,7 @@
                       {% if study.status == 'Completed' %} bg-emerald-500/10 text-emerald-400
                       {% elif study.status == 'Processing' %} bg-yellow-500/10 text-yellow-400
                       {% else %} bg-red-500/10 text-red-400 {% endif %}">
-                      
+
                       {% if study.status == 'Completed' %}
                         <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
                       {% elif study.status == 'Processing' %}
@@ -360,11 +330,11 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Setup UI Animations & Interactions
+      // 1. Setup Animations
       const mainContent = document.getElementById('main-content');
       if (mainContent) mainContent.classList.add('animate-fadeIn');
 
-      // Setup Drag & Drop Upload
+      // 2. Setup Drag & Drop Upload UI
       const uploadZone = document.getElementById('uploadZone');
       const fileInput = document.getElementById('image-input');
       const filePreview = document.getElementById('filePreview');
@@ -404,7 +374,7 @@
         fileList.innerHTML = '';
       });
 
-      // Setup Modality Buttons
+      // 3. Setup Modality Buttons
       const modalityBtns = document.querySelectorAll('.modality-btn');
       const modalityInput = document.getElementById('modality');
       modalityBtns.forEach(btn => {
@@ -415,109 +385,97 @@
         });
       });
 
-      // API Logic: Upload & Poll
+      // 4. API Logic: Upload Form (Updated using async/await and FormData standard)
       const uploadForm = document.getElementById('upload-form');
       const submitButton = document.getElementById('submit-button');
       const submitBtnText = submitButton.querySelector('span');
       const resultContainer = document.getElementById('result-container');
-      const studyIdSpan = document.getElementById('study-id');
-      const studyStatusSpan = document.getElementById('study-status');
-      const probabilityChartDiv = document.getElementById('probability-chart');
-      const originalImage = document.getElementById('original-image');
-      const heatmapImage = document.getElementById('heatmap-image');
+      const resultContent = document.getElementById('result-content');
 
-      uploadForm.addEventListener('submit', function(e) {
+      uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         if (fileInput.files.length === 0) {
           alert('Please select an image file first.');
           return;
         }
 
-        submitBtnText.textContent = 'Processing Data...';
+        submitBtnText.textContent = 'Processing...';
         submitButton.disabled = true;
         resultContainer.classList.add('hidden');
-        probabilityChartDiv.innerHTML = '';
+        resultContent.innerHTML = '';
 
-        const formData = new FormData(this);
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        // Build FormData with required fields
+        const formData = new FormData();
+        formData.append('patient_info', 'Anonymous Patient'); // default patient info
+        const file = fileInput.files[0];
+        if (file) {
+            formData.append('image', file); // exact field name expected by serializer
+        }
+        formData.append('modality', document.getElementById('modality').value);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
-        fetch(this.action, {
-          method: 'POST',
-          body: formData,
-          headers: { 'X-CSRFToken': csrftoken }
-        })
-        .then(response => {
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          return response.json();
-        })
-        .then(data => {
-          const taskId = data.task_id;
-          let pollCount = 0;
-
-          const pollTaskStatus = () => {
-            fetch(`/api/tasks/${taskId}/`)
-              .then(res => res.json())
-              .then(taskResult => {
-                if (taskResult.status === 'Completed') {
-                  studyIdSpan.textContent = `#STD-${taskResult.study_id}`;
-                  studyStatusSpan.textContent = 'Completed';
-
-                  // Generate Progress Bars
-                  if (taskResult.results && typeof taskResult.results === 'object') {
-                    const sortedPredictions = Object.entries(taskResult.results).sort(([,a],[,b]) => b-a);
-                    sortedPredictions.forEach(([className, probability]) => {
-                      const probPercent = (probability * 100).toFixed(1);
-                      const barColor = probability > 0.5 ? 'bg-red-500' : (probability > 0.2 ? 'bg-yellow-500' : 'bg-emerald-500');
-                      
-                      probabilityChartDiv.innerHTML += `
-                        <div>
-                          <div class="text-sm font-medium mb-1 flex justify-between text-gray-300">
-                            <span>${className}</span>
-                            <span>${probPercent}%</span>
-                          </div>
-                          <div class="w-full bg-navy-900 rounded-full h-2 border border-white/5">
-                            <div class="h-2 rounded-full ${barColor}" style="width: ${probPercent}%"></div>
-                          </div>
-                        </div>
-                      `;
-                    });
-                  } else {
-                    probabilityChartDiv.innerHTML = '<p class="text-sm text-gray-500">No prediction data.</p>';
-                  }
-
-                  originalImage.src = `/media/studies/${taskResult.study_id}/`;
-                  heatmapImage.src = taskResult.heatmap_url;
-                  resultContainer.classList.remove('hidden');
-                  
-                  submitBtnText.textContent = 'Run AI Inference';
-                  submitButton.disabled = false;
-                } else {
-                  if (pollCount < 30) {
-                    setTimeout(pollTaskStatus, 1000);
-                    pollCount++;
-                  } else {
-                    alert('Task took too long to complete.');
-                    submitBtnText.textContent = 'Run AI Inference';
-                    submitButton.disabled = false;
-                  }
+        try {
+            const response = await fetch("{% url 'studies:upload' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 }
-              })
-              .catch(err => {
-                console.error(err);
-                submitBtnText.textContent = 'Run AI Inference';
-                submitButton.disabled = false;
-              });
-          };
+            });
 
-          pollTaskStatus();
-        })
-        .catch(error => {
-          console.error(error);
-          alert('Error: ' + error.message);
-          submitBtnText.textContent = 'Run AI Inference';
-          submitButton.disabled = false;
-        });
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorMsg = JSON.stringify(errorData, null, 2);
+                alert('Validation error: ' + errorMsg);
+
+                // Render Error Message in UI matching Dark Theme
+                resultContent.innerHTML = `
+                  <div class="p-4 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300" role="alert">
+                      <p class="font-bold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Error Processing Study
+                      </p>
+                      <pre class="mt-2 text-xs overflow-x-auto text-red-400/80 bg-navy-950/50 p-2 rounded">${errorMsg}</pre>
+                  </div>`;
+                resultContainer.classList.remove('hidden');
+                return;
+            }
+
+            const data = await response.json();
+
+            // Render Success Message in UI matching Dark Theme
+            resultContent.innerHTML = `
+              <div class="p-4 bg-emerald-900/30 border border-emerald-500/50 rounded-xl text-emerald-300">
+                <p class="font-semibold flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                  Study submitted successfully!
+                </p>
+                <div class="mt-3 flex items-center justify-between bg-navy-900/50 p-3 rounded-lg border border-white/5">
+                  <span class="text-sm text-gray-400">Study ID:</span>
+                  <span class="font-mono text-emerald-400 font-bold">${data.study_id}</span>
+                </div>
+              </div>
+            `;
+            resultContainer.classList.remove('hidden');
+
+        } catch (err) {
+            console.error('Fetch error:', err);
+            alert('An unexpected error occurred.');
+
+            resultContent.innerHTML = `
+              <div class="p-4 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300" role="alert">
+                  <p class="font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Network Error
+                  </p>
+                  <p class="mt-2 text-sm text-red-400/80">An unexpected error occurred during upload.</p>
+              </div>`;
+            resultContainer.classList.remove('hidden');
+        } finally {
+            submitBtnText.textContent = 'Run AI Inference';
+            submitButton.disabled = false;
+        }
       });
     });
 

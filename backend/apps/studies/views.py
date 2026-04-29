@@ -1,24 +1,47 @@
+from django.http import JsonResponse
 from django.shortcuts import render, HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Study, Prediction
-from .serializers import StudySerializer
-from apps.ai_engine.tasks import process_medical_image
+from .serializers import StudySerializer, PredictionSerializer
+from apps.ai_engine.tasks import process_xray_study
 import uuid
 
-class StudyUploadView(APIView):
+class StudyUploadView(generics.CreateAPIView):
+    """
+    Endpoint to upload a new study (image + metadata).
+    Handles missing `patient_name` by generating an anonymous identifier.
+    """
+    queryset = Study.objects.all()
+    serializer_class = StudySerializer
+
     def post(self, request, *args, **kwargs):
-        serializer = StudySerializer(data=request.data)
+        # DRF’s request.data can be immutable (e.g., QueryDict), so copy it.
+        data = request.data.copy()
+
+        # If the frontend does not supply a patient_name, generate an anonymous one.
+        if not data.get('patient_name'):
+            anon_name = f"Anonymous_Patient_{uuid.uuid4().hex[:6]}"
+            data['patient_name'] = anon_name
+
+        # Use the serializer with the (potentially) augmented data.
+        serializer = self.get_serializer(data=data)
+
         if serializer.is_valid():
             study = serializer.save()
-            # Trigger the Celery task
-            process_medical_image.delay(str(study.id))
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Trigger Celery task for AI processing.
+            process_xray_study.delay(study.id, study.image.path)
+            return Response({'study_id': study.id, 'status': 'Processing'}, status=status.HTTP_201_CREATED)
+
+        # Print serializer errors to the terminal for debugging (as requested earlier).
+        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 def DashboardView(request):
-    return render(request, 'studies/dashboard.html')
+    studies_list = Study.objects.all().order_by('-id')
+    return render(request, 'studies/dashboard.html', {'studies': studies_list})
 
 def XrayAnalysisView(request):
     return HttpResponse("X-ray Analysis Module coming soon")

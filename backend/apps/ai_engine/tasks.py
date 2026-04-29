@@ -5,7 +5,7 @@ from django.conf import settings
 from ai_engine.xray.inference import XrayPredictor
 
 @shared_task
-def process_medical_image(study_id: int, image_path: str) -> dict:
+def process_xray_study(study_id: int, image_path: str) -> dict:
     """Process the X-ray study and return the prediction results and heatmap path."""
     # Import the Study and Prediction models
     Study = apps.get_model('studies', 'Study')
