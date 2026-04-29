@@ -168,9 +168,9 @@
         </div>
 
         <nav class="flex items-center gap-1">
-          <a href="dashboard.html" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Dashboard</a>
-          <a href="studies_list.html" class="px-4 py-2 text-sm text-white bg-emerald-500/10 rounded-lg border border-emerald-500/20">Studies</a>
-          <a href="{% url 'studies:report_list' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Reports</a>
+          <a href="{% url 'studies:dashboard' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Dashboard</a>
+          <a href="{% url 'studies:study_list' %}" class="px-4 py-2 text-sm text-white bg-emerald-500/10 rounded-lg border border-emerald-500/20">Studies</a>
+          <a href="{% url 'studies:report_detail' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Reports</a>
           <a href="{% url 'studies:analytics' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Analytics</a>
         </nav>
 

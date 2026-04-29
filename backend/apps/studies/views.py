@@ -135,12 +135,11 @@ class ReportListView(ListView):
     Tái sử dụng lại giao diện bảng của trang study_list.
     """
     model = Study
-    template_name = "studies/study_list.html" # Dùng lại UI cực đẹp của bạn
+    template_name = "studies/report_detail.html"
     context_object_name = "studies"
     paginate_by = 25
 
     def get_queryset(self):
-        # Lọc ra những ca có status là 'Completed' và sắp xếp mới nhất lên đầu
         if hasattr(Study, "created_at"):
             return Study.objects.filter(status='Completed').order_by('-created_at')
         return Study.objects.filter(status='Completed').order_by('-id')
