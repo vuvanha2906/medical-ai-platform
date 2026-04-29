@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medical Studies List | RadiologyAI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    :root {
+      --navy-950: #020617;
+      --navy-900: #0a1628;
+      --navy-800: #0f2240;
+      --navy-700: #1a365d;
+      --navy-600: #234e7a;
+      --emerald-500: #10b981;
+      --emerald-600: #059669;
+      --emerald-400: #34d399;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 50%, var(--navy-800) 100%);
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: rgba(15, 34, 64, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+
+    .glass-input {
+      background: rgba(10, 22, 40, 0.8);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .glass-input:focus {
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .table-row {
+      border-bottom: 1px solid rgba(16, 185, 129, 0.08);
+      transition: background 0.15s ease;
+    }
+
+    .table-row:hover {
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--emerald-600) 0%, var(--emerald-500) 100%);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(26, 54, 93, 0.6);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(26, 54, 93, 0.9);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .status-completed {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-processing {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .status-pending {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .status-failed {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .modality-xray {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .modality-mri {
+      background: rgba(236, 72, 153, 0.15);
+      color: #f9a8d4;
+      border: 1px solid rgba(236, 72, 153, 0.3);
+    }
+
+    .modality-ct {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .modality-us {
+      background: rgba(20, 184, 166, 0.15);
+      color: #5eead4;
+      border: 1px solid rgba(20, 184, 166, 0.3);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--navy-900);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--navy-700);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--emerald-600);
+    }
+
+    .pulse-dot {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body class="text-slate-200 antialiased">
+
+  <header class="glass-card border-b border-emerald-500/10">
+    <div class="max-w-[1600px] mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-semibold text-white">RadiologyAI</h1>
+            <p class="text-xs text-slate-400">Clinical Research Platform</p>
+          </div>
+        </div>
+
+        <nav class="flex items-center gap-1">
+          <a href="dashboard.html" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Dashboard</a>
+          <a href="studies_list.html" class="px-4 py-2 text-sm text-white bg-emerald-500/10 rounded-lg border border-emerald-500/20">Studies</a>
+          <a href="{% url 'studies:report_list' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Reports</a>
+          <a href="{% url 'studies:analytics' %}" class="px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors">Analytics</a>
+        </nav>
+
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+            <span>System Online</span>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-sm font-semibold text-white">
+            DR
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] mx-auto px-6 py-8">
+
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="text-2xl font-semibold text-white mb-1">Medical Studies</h2>
+        <p class="text-sm text-slate-400">Browse and manage all imaging studies in the system</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="btn-secondary px-4 py-2.5 rounded-lg text-sm font-medium text-slate-300 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Export CSV
+        </button>
+        <a href="dashboard.html" class="btn-primary px-4 py-2.5 rounded-lg text-sm font-medium text-white flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          New Upload
+        </a>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-xl p-5 mb-6">
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[280px]">
+          <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Search Studies</label>
+          <div class="relative">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" placeholder="Search by Patient Name, Study ID..." class="glass-input w-full pl-10 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-slate-500 outline-none">
+          </div>
+        </div>
+
+        <div class="w-[200px]">
+          <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">From Date</label>
+          <input type="date" class="glass-input w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none">
+        </div>
+
+        <div class="w-[200px]">
+          <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">To Date</label>
+          <input type="date" class="glass-input w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none">
+        </div>
+
+        <div class="w-[160px]">
+          <label class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Status</label>
+          <select class="glass-input w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%2394a3b8%27%3e%3cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27M19 9l-7 7-7-7%27/%3e%3c/svg%3e'); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;">
+            <option value="">All Status</option>
+            <option value="completed">Completed</option>
+            <option value="processing">Processing</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+
+        <button class="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-white">
+          Apply Filters
+        </button>
+
+        <button class="text-sm text-slate-400 hover:text-emerald-400 transition-colors px-3 py-2.5">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <div class="glass-card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-emerald-500/10">
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <input type="checkbox" class="w-4 h-4 rounded border-slate-600 bg-slate-800 cursor-pointer">
+              </th>
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Study ID</th>
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Patient Name</th>
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Modality</th>
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Created At</th>
+              <th class="text-left px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+              <th class="text-right px-5 py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {% for study in studies %}
+            <tr class="table-row">
+              <td class="px-5 py-4">
+                <input type="checkbox" class="w-4 h-4 rounded border-slate-600 bg-slate-800 cursor-pointer">
+              </td>
+              <td class="px-5 py-4">
+                <span class="font-mono text-sm text-emerald-400">{{ study.id }}</span>
+              </td>
+              <td class="px-5 py-4">
+                <span class="font-mono text-sm text-slate-300">{{ study.patient_name }}</span>
+              </td>
+              <td class="px-5 py-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
+                  {% if study.modality == 'X-ray' or study.modality == 'xray' %} modality-xray
+                  {% elif study.modality == 'MRI' or study.modality == 'mri' %} modality-mri
+                  {% elif study.modality == 'CT Scan' or study.modality == 'ct' %} modality-ct
+                  {% elif study.modality == 'Ultrasound' or study.modality == 'us' %} modality-us
+                  {% else %} bg-slate-800 text-slate-300 border border-slate-700 {% endif %}">
+                  {{ study.modality|default:"Unknown" }}
+                </span>
+              </td>
+              <td class="px-5 py-4 text-sm text-slate-400">{{ study.created_at }}</td>
+              <td class="px-5 py-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
+                  {% if study.status == 'Completed' %} status-completed
+                  {% elif study.status == 'Processing' %} status-processing
+                  {% elif study.status == 'Pending' %} status-pending
+                  {% else %} status-failed {% endif %}">
+                  <span class="w-1.5 h-1.5 rounded-full
+                    {% if study.status == 'Completed' %} bg-emerald-400
+                    {% elif study.status == 'Processing' %} bg-blue-400 pulse-dot
+                    {% elif study.status == 'Pending' %} bg-yellow-400
+                    {% else %} bg-red-400 {% endif %}"></span>
+                  {{ study.status }}
+                </span>
+              </td>
+              <td class="px-5 py-4 text-right">
+                <a href="{% url 'studies:report_detail' study.id %}" class="btn-secondary px-3 py-1.5 rounded-md text-xs font-medium text-slate-300 inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  View Report
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="px-5 py-8 text-center text-slate-400 text-sm">
+                No studies found in the database.
+              </td>
+            </tr>
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </div>
+
+      <div class="border-t border-emerald-500/10 px-5 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">Rows per page:</span>
+            <select class="bg-transparent text-sm text-white outline-none cursor-pointer">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40" disabled>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+              </svg>
+            </button>
+            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40" disabled>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <span class="px-3 text-sm text-slate-400">Page <span class="text-white">1</span> of <span class="text-white">1</span></span>
+            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40" disabled>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-40" disabled>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>

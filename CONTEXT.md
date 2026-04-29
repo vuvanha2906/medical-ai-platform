@@ -1,19 +1,17 @@
-# Project Context: Medical AI Platform
-This is a research-oriented Medical AI Platform built on Windows. 
-The goal is to provide web-based medical image diagnosis using Deep Learning, specifically focusing on handling class imbalance and Explainable AI (Grad-CAM).
+# Project Context: Medical AI Platform (Updated)
 
-## Tech Stack
-* **Backend:** Django 4.2, Django REST Framework (DRF).
-* **Task Queue:** Celery (currently running synchronously via `CELERY_TASK_ALWAYS_EAGER = True` for local dev) + SQLite.
-* **AI Engine:** PyTorch (CPU for dev), torchvision, pytorch-grad-cam.
-* **Frontend:** Django Templates + Tailwind CSS (via CDN) - No React. Modern, academic, clinical UI.
+## Current Status
+* **Infrastructure:** Django + DRF + SQLite. Celery is configured in 'Eager' mode for local synchronous testing.
+* **Frontend:** Premium UI integrated from v0.dev (Dashboard). Using Vanilla JS Fetch API for non-reloading uploads.
+* **AI Logic:** `XrayPredictor` class implemented using PyTorch (DenseNet121). Standard medical preprocessing (224px, Normalization) is active.
+* **Workflow:** User uploads image -> `studies/` API creates record -> `ai_engine` Task runs real PyTorch inference -> Result saved to `Prediction` model.
 
-## Current Progress
-* [x] Project structure initialized using `uv`.
-* [x] Django settings configured for a decoupled `frontend/` directory.
-* [x] Database models created: `Study` (Patient info, modality, status) and `Prediction` (JSON results, heatmap path).
-* [x] Basic Frontend UI (Dashboard) is working.
-* [x] Mock Celery task (`time.sleep(3)`) is currently handling the processing flow.
+## Recent Achievements
+* [x] Successfully bridged v0.dev HTML with Django Template tags and CSRF protection.
+* [x] Fixed `NoReverseMatch` by structuring URLs for `studies`, `report`, and `analytics`.
+* [x] Implemented real-time status update on Dashboard after inference completes.
 
-## Next Immediate Goal (Month 1 MVP)
-Implement the end-to-end X-ray pipeline replacing the mock task with a real PyTorch `DenseNet121` pretrained model, and generate basic Grad-CAM heatmaps.
+## Immediate Tasks
+* [ ] Integrate 3 new templates: `studies_list.html`, `report_detail.html`, `analytics.html`.
+* [ ] Implement Grad-CAM heatmap generation and storage in the media folder.
+* [ ] Create API endpoints for Analytics data (JSON for charts).
