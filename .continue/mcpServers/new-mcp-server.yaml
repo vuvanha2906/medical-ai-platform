@@ -1,0 +1,9 @@
+name: medical-ai-platform MCP server
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: medical_context
+    command: /home/vu-van-ha/PycharmProjects/GithubProject/medical-ai-platform/.venv/bin/python # trỏ đến python
+    args:
+      - /home/vu-van-ha/PycharmProjects/GithubProject/medical-ai-platform/mcp/context_mcp.py # trỏ đến đường dẫn chính
+
