@@ -1,421 +1,499 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Diagnosis Report | MedVision AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            navy: {
-              950: '#020617',
-              900: '#0a1628',
-              850: '#0c1a30',
-              800: '#0f2240',
-              700: '#1a365d',
-              600: '#2d4a6f',
-            },
-            emerald: {
-              500: '#10b981',
-              600: '#059669',
-              700: '#047857',
-            },
-            paper: {
-              50: '#fefefe',
-              100: '#f8f9fa',
-              200: '#f1f3f4',
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Diagnostic Report - {{ study.patient_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#020617',
+                            900: '#0a1628',
+                            850: '#0c1a30',
+                            800: '#0f2240',
+                            700: '#1a365d',
+                            600: '#2d4a6f',
+                        },
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        serif: ['Crimson Pro', 'Georgia', 'serif'],
+                    }
+                }
             }
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-            serif: ['Crimson Pro', 'Georgia', 'serif'],
-          }
         }
-      }
-    }
-  </script>
-  <style>
-    body {
-      background: linear-gradient(135deg, #020617 0%, #0a1628 50%, #0f2240 100%);
-    }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #020617 0%, #0a1628 50%, #0f2240 100%);
+        }
 
-    .report-paper {
-      background: linear-gradient(180deg, #fefefe 0%, #f8f9fa 100%);
-      box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.3),
-        0 2px 4px -2px rgba(0, 0, 0, 0.2),
-        0 25px 50px -12px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    }
+        .glass-dark {
+            background: rgba(15, 34, 64, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
 
-    .image-viewer {
-      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
-      box-shadow:
-        inset 0 2px 10px rgba(0, 0, 0, 0.5),
-        0 4px 20px rgba(0, 0, 0, 0.3);
-    }
+        .report-paper {
+            background: linear-gradient(180deg, #0f2240 0%, #0a1628 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-    .glass-dark {
-      background: rgba(15, 34, 64, 0.6);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(16, 185, 129, 0.15);
-    }
+        .image-viewer {
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
 
-    .heatmap-overlay {
-      background: linear-gradient(
-        135deg,
-        rgba(239, 68, 68, 0.7) 0%,
-        rgba(249, 115, 22, 0.6) 25%,
-        rgba(234, 179, 8, 0.5) 50%,
-        rgba(34, 197, 94, 0.3) 75%,
-        rgba(59, 130, 246, 0.2) 100%
-      );
-      mix-blend-mode: screen;
-    }
+        .heatmap-overlay {
+            mix-blend-mode: screen;
+        }
 
-    .confidence-bar {
-      background: linear-gradient(90deg, #f1f3f4 0%, #e5e7eb 100%);
-    }
+        .confidence-bar {
+            background: rgba(255, 255, 255, 0.1);
+        }
 
-    .confidence-fill-high {
-      background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-    }
+        .confidence-fill-high {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+        }
 
-    .zoom-control {
-      transition: all 0.2s ease;
-    }
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.1) 80%, transparent 100%);
+        }
 
-    .zoom-control:hover {
-      background: rgba(16, 185, 129, 0.2);
-    }
+        .validation-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-    .section-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent 0%, #d1d5db 20%, #d1d5db 80%, transparent 100%);
-    }
+        .validation-btn:active {
+            transform: scale(0.98);
+        }
 
-    .validation-btn {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+        .stamp-approved {
+            color: #10b981;
+            border: 3px solid #10b981;
+            transform: rotate(-12deg);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-    .validation-btn:active {
-      transform: scale(0.98);
-    }
+        .stamp-approved.visible {
+            opacity: 1;
+        }
 
-    .stamp-approved {
-      color: #059669;
-      border: 3px solid #059669;
-      transform: rotate(-12deg);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
 
-    .stamp-approved.visible {
-      opacity: 1;
-    }
+        ::-webkit-scrollbar-track {
+            background: #0f2240;
+        }
 
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
+        ::-webkit-scrollbar-thumb {
+            background: #1a365d;
+            border-radius: 3px;
+        }
 
-    ::-webkit-scrollbar-track {
-      background: #0f2240;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #1a365d;
-      border-radius: 3px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #2d4a6f;
-    }
-  </style>
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2d4a6f;
+        }
+    </style>
 </head>
-<body class="min-h-screen font-sans text-gray-800 antialiased">
+<body class="min-h-screen font-sans text-gray-200 antialiased">
 
-  <header class="glass-dark sticky top-0 z-50">
+<header class="glass-dark sticky top-0 z-50">
     <div class="max-w-[1800px] mx-auto px-6 py-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <a href="{% url 'studies:dashboard' %}" class="flex items-center gap-2 text-gray-400 hover:text-emerald-400 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            <span class="text-sm font-medium">Back to Dashboard</span>
-          </a>
-          <div class="h-5 w-px bg-navy-600"></div>
-          <nav class="flex items-center gap-2 text-sm">
-            <span class="text-gray-500">Studies</span>
-            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-            <span class="text-emerald-400 font-mono">ID: {{ study.id }}</span>
-          </nav>
-        </div>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="{% url 'studies:study_list' %}"
+                   class="flex items-center gap-2 text-gray-400 hover:text-emerald-400 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    <span class="text-sm font-medium">Back to Studies</span>
+                </a>
+                <div class="h-5 w-px bg-navy-600"></div>
+                <nav class="flex items-center gap-2 text-sm">
+                    <span class="text-gray-500">Studies</span>
+                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <span class="text-emerald-400 font-mono">ID: {{ study.id }}</span>
+                </nav>
+            </div>
 
-        <div class="text-center">
-          <h1 class="text-white font-semibold tracking-tight">AI Diagnostic Report</h1>
-          <p class="text-xs text-gray-400 font-mono">Generated: {{ study.created_at }}</p>
-        </div>
+            <div class="text-center">
+                <h1 class="text-white font-semibold tracking-tight">AI Diagnostic Report</h1>
+                <p class="text-xs text-gray-400 font-mono">Generated: {{ study.created_at|date:"Y-m-d H:i" }}</p>
+            </div>
 
-        <div class="flex items-center gap-3">
-          <button class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-            </svg>
-            Print
-          </button>
-          <button class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Export PDF
-          </button>
+            <div class="flex items-center gap-3">
+                <button class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Print
+                </button>
+
+                <a href="{% url 'studies:download_pdf' study.id %}" target="_blank"
+                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Export PDF
+                </a>
+
+                <button class="flex items-center gap-2 px-4 py-1.5 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684z"/>
+                    </svg>
+                    Share
+                </button>
+            </div>
         </div>
-      </div>
     </div>
-  </header>
+</header>
 
-  <main class="max-w-[1800px] mx-auto px-6 py-6">
+<main class="max-w-[1800px] mx-auto px-6 py-6">
     <div class="grid grid-cols-12 gap-6">
 
-      <div class="col-span-7 space-y-4">
-
-        <div class="glass-dark rounded-xl p-4">
-          <div class="grid grid-cols-4 gap-6">
-            <div>
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Patient Name</p>
-              <p class="text-white font-mono font-medium">{{ study.patient_name }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</p>
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full {% if study.status == 'Completed' %}bg-emerald-400{% else %}bg-yellow-400{% endif %}"></span>
-                <span class="text-white font-medium">{{ study.status }}</span>
-              </div>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Study Date</p>
-              <p class="text-white font-mono">{{ study.created_at }}</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">System</p>
-              <p class="text-emerald-400 font-mono">MedVision AI</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="glass-dark rounded-xl p-4">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-white font-semibold">Image Analysis</h2>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-400">View Mode:</span>
-              <div class="flex bg-navy-800 rounded-lg p-0.5">
-                <button id="viewSideBySide" class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">Side by Side</button>
-                <button id="viewOverlay" class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">Overlay</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400 font-medium">Original Image</span>
-              </div>
-              <div class="image-viewer rounded-xl overflow-hidden relative group" id="originalViewer">
-                <div class="aspect-square bg-gradient-to-br from-gray-900 to-gray-800 relative flex items-center justify-center">
-                  <div class="text-gray-600">Original Scan</div>
-                  <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
-                </div>
-
-                <div class="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 rounded-lg p-1">
-                  <button class="zoom-control w-7 h-7 flex items-center justify-center text-white rounded" onclick="zoomOut('original')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                  </button>
-                  <span id="originalZoom" class="text-xs text-white font-mono px-2">100%</span>
-                  <button class="zoom-control w-7 h-7 flex items-center justify-center text-white rounded" onclick="zoomIn('original')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400 font-medium">AI Attention Map (Grad-CAM)</span>
-                <div class="flex items-center gap-2">
-                  <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                    <input type="checkbox" id="toggleHeatmap" checked class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0">
-                    Show Overlay
-                  </label>
-                </div>
-              </div>
-              <div class="image-viewer rounded-xl overflow-hidden relative group" id="heatmapViewer">
-                <div class="aspect-square bg-gradient-to-br from-gray-900 to-gray-800 relative flex items-center justify-center">
-
-                  <div class="text-gray-600 z-0">Original Scan</div>
-
-                  <div id="heatmapOverlay" class="absolute inset-0 z-10 transition-opacity duration-300">
-                    {% if prediction and prediction.heatmap_url %}
-                      <img src="{{ prediction.heatmap_url }}" alt="Heatmap" class="w-full h-full object-cover mix-blend-screen opacity-80" />
-                    {% else %}
-                      <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs">No Heatmap Available</div>
-                    {% endif %}
-                  </div>
-
-                  <div class="absolute inset-0 opacity-10 z-20 pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
-                </div>
-
-                <div class="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 rounded-lg p-1 z-30">
-                  <button class="zoom-control w-7 h-7 flex items-center justify-center text-white rounded" onclick="zoomOut('heatmap')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                  </button>
-                  <span id="heatmapZoom" class="text-xs text-white font-mono px-2">100%</span>
-                  <button class="zoom-control w-7 h-7 flex items-center justify-center text-white rounded" onclick="zoomIn('heatmap')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-span-5 space-y-4">
-
-        <div class="report-paper rounded-xl overflow-hidden">
-          <div class="bg-gradient-to-r from-navy-800 to-navy-700 px-6 py-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-white font-semibold text-lg">Clinical Findings</h2>
-                <p class="text-emerald-400 text-sm font-medium">AI-Assisted Analysis Report</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-6 space-y-6">
-
-            <div>
-              <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                Primary Finding
-              </h3>
-
-              {% if prediction %}
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div class="flex items-start justify-between">
+        <div class="col-span-7 space-y-4">
+            <div class="glass-dark rounded-xl p-4">
+                <div class="grid grid-cols-4 gap-6">
                     <div>
-                      <h4 class="font-semibold text-gray-900">{{ prediction.prediction_label }}</h4>
-                      <p class="text-sm text-gray-600 mt-1">AI detected patterns indicative of this condition.</p>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Patient Name</p>
+                        <p class="text-white font-mono font-medium">{{ study.patient_name }}</p>
                     </div>
-                  </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Modality</p>
+                        <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path
+                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M3 4a1 1 0 011-1 1h16a1 1 0 011 1 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM7 10h10M7 14h10"/></svg>
+                </span>
+                            <span class="text-white font-medium">{{ study.modality|default:"Unknown" }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Study Date</p>
+                        <p class="text-white font-mono">{{ study.created_at|date:"Y-m-d" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</p>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full {% if study.status == 'Completed' %}bg-emerald-400{% else %}bg-yellow-400{% endif %}"></span>
+                            <span class="text-white font-medium">{{ study.status }}</span>
+                        </div>
+                    </div>
                 </div>
-              {% else %}
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p class="text-sm text-gray-500">No prediction data available for this study.</p>
-                </div>
-              {% endif %}
             </div>
 
-            <div>
-              <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                Detection Probability
-              </h3>
-
-              {% if prediction %}
-                <div class="space-y-3">
-                  <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                      <span class="text-sm font-medium text-gray-700">{{ prediction.prediction_label }}</span>
-                      <span class="text-sm font-mono font-semibold text-red-600">{{ prediction.probability }}</span>
+            <div class="glass-dark rounded-xl p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-white font-semibold">Image Analysis</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">View Mode:</span>
+                        <div class="flex bg-navy-800 rounded-lg p-0.5">
+                            <button class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">
+                                Side by Side
+                            </button>
+                            <button class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">
+                                Overlay
+                            </button>
+                        </div>
                     </div>
-                    <div class="confidence-bar h-2.5 rounded-full overflow-hidden">
-                      <div class="confidence-fill-high h-full rounded-full" style="width: 85%;"></div>
-                    </div>
-                  </div>
                 </div>
-              {% else %}
-                 <p class="text-sm text-gray-500">Awaiting processing or data unavailable.</p>
-              {% endif %}
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400 font-medium">Original Image</span>
+                        </div>
+                        <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
+                            {% if study.image %}
+                                <img src="{{ study.image.url }}" alt="Original Study Image"
+                                     class="w-full h-full object-contain"/>
+                            {% else %}
+                                <div class="flex h-full items-center justify-center text-gray-500">No Image Available
+                                </div>
+                            {% endif %}
+                            <div class="absolute inset-0 opacity-10 pointer-events-none"
+                                 style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400 font-medium">AI Attention Map (Grad-CAM)</span>
+                            <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                                <input type="checkbox" id="toggleHeatmap" checked
+                                       class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500">
+                                Show Overlay
+                            </label>
+                        </div>
+                        <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
+                            {% if study.image %}
+                                <img src="{{ study.image.url }}" alt="Original Study Image"
+                                     class="w-full h-full object-contain"/>
+                            {% endif %}
+
+                            <div id="heatmapOverlay" class="absolute inset-0 z-10 transition-opacity duration-300">
+                                {% if prediction and prediction.heatmap_url %}
+                                    <img src="{{ prediction.heatmap_url }}" alt="Heatmap"
+                                         class="w-full h-full object-contain heatmap-overlay opacity-80"/>
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs bg-navy-900">
+                                        No Heatmap Available
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="absolute bottom-3 right-3 bg-black/70 rounded-lg p-2 z-20">
+                                <p class="text-[10px] text-gray-400 mb-1.5 text-center">Attention Intensity</p>
+                                <div class="w-24 h-2 rounded-full"
+                                     style="background: linear-gradient(90deg, #3b82f6 0%, #22c55e 25%, #eab308 50%, #f97316 75%, #ef4444 100%);"></div>
+                                <div class="flex justify-between text-[9px] text-gray-500 mt-0.5"><span>Low</span><span>High</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <div class="section-divider"></div>
-
-            <div class="flex items-center gap-3 mt-4" id="validationButtons">
-              <button onclick="approveReport()" class="validation-btn flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-lg shadow-emerald-500/20">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                Approve Report
-              </button>
-              <button class="validation-btn flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border-2 border-gray-300 hover:border-amber-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                Amend
-              </button>
-            </div>
-
-          </div>
         </div>
 
-      </div>
+        <div class="col-span-5 space-y-4">
+            <div class="report-paper rounded-xl overflow-hidden">
+
+                <div class="bg-gradient-to-r from-navy-800 to-navy-700 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-white font-semibold text-lg">Clinical Findings</h2>
+                            <p class="text-emerald-400 text-sm font-medium">AI-Assisted Analysis Report</p>
+                        </div>
+                        {% if prediction %}
+                            <div class="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-lg">
+                                <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                                <span class="text-red-400 text-sm font-medium">Finding Detected</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                            Primary Finding
+                        </h3>
+                        {% if prediction %}
+                            <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h4 class="font-semibold text-red-100">{{ prediction.prediction_label }}</h4>
+                                        <p class="text-sm text-red-200/70 mt-1">AI detected patterns indicative of this
+                                            condition.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4">
+                                <p class="text-sm text-gray-500">No prediction data available for this study.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                            Detection Confidence
+                        </h3>
+                        {% if prediction %}
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <span class="text-sm font-medium text-gray-300">{{ prediction.prediction_label }}</span>
+                                        <span class="font-mono text-sm font-semibold text-red-400">{{ prediction.probability }}</span>
+                                    </div>
+                                    <div class="confidence-bar h-2.5 rounded-full overflow-hidden">
+                                        <div class="confidence-fill-high h-full rounded-full" style="width: 85%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-sm text-gray-500">Awaiting processing or data unavailable.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                            AI-Generated Summary
+                        </h3>
+                        <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4">
+                            <p class="text-gray-300 leading-relaxed font-serif text-[15px]">
+                                The radiograph demonstrates patterns consistent with the detected <strong>
+                                {{ prediction.prediction_label|default:"condition" }}</strong>. The highlighted regions
+                                in the attention map indicate the primary areas of concern identified by the neural
+                                network.
+                            </p>
+                            <p class="text-gray-400 text-sm mt-4 italic">
+                                Recommendation: Clinical correlation and possible follow-up imaging or laboratory workup
+                                advised.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
+                            Quantitative Measurements
+                        </h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-navy-800/50 rounded-lg p-3 border border-white/5">
+                                <p class="text-xs text-gray-500 mb-1">Image Quality Score</p>
+                                <p class="font-mono font-semibold text-gray-200">8.7 / 10</p>
+                            </div>
+                            <div class="bg-navy-800/50 rounded-lg p-3 border border-white/5">
+                                <p class="text-xs text-gray-500 mb-1">Confidence Interval</p>
+                                <p class="font-mono font-semibold text-gray-200"> 4.2%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                            Physician Validation
+                        </h3>
+
+                        <div id="validationPending"
+                             class="border-2 border-dashed border-gray-600 bg-navy-900/30 rounded-lg p-5 text-center">
+                            <svg class="w-10 h-10 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor"
+                                 viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <p class="text-gray-300 font-medium mb-1">Awaiting Physician Review</p>
+                            <p class="text-sm text-gray-500">This report requires validation by an authorized
+                                physician</p>
+                        </div>
+
+                        <div id="validationComplete"
+                             class="hidden border-2 border-emerald-500/50 bg-emerald-900/20 rounded-lg p-5 relative overflow-hidden">
+                            <div class="stamp-approved absolute top-4 right-4 text-2xl font-bold px-4 py-2 rounded-lg"
+                                 id="approvedStamp">APPROVED
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor"
+                                         viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-emerald-400">Report Validated</p>
+                                    <p class="text-sm text-gray-300 mt-1">Approved by <strong>Dr. Sarah Chen,
+                                        MD</strong></p>
+                                    <p class="text-xs text-gray-500 font-mono mt-1" id="approvalTimestamp"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3 mt-4" id="validationButtons">
+                            <button onclick="approveReport()"
+                                    class="validation-btn w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-lg shadow-emerald-500/20">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Approve Report
+                            </button>
+                            <div class="flex gap-3">
+                                <button onclick="requestAmendment()"
+                                        class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-gray-300 font-medium rounded-lg border border-navy-600 hover:border-amber-500/50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Amend
+                                </button>
+                                <button onclick="rejectReport()"
+                                        class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-red-400 font-medium rounded-lg border border-navy-600 hover:border-red-500/50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </div>
-  </main>
+</main>
 
-  <script>
-    const zoomLevels = { original: 100, heatmap: 100 };
-
-    function zoomIn(viewer) {
-      if (zoomLevels[viewer] < 300) {
-        zoomLevels[viewer] += 25;
-        updateZoomDisplay(viewer);
-      }
-    }
-
-    function zoomOut(viewer) {
-      if (zoomLevels[viewer] > 50) {
-        zoomLevels[viewer] -= 25;
-        updateZoomDisplay(viewer);
-      }
-    }
-
-    function updateZoomDisplay(viewer) {
-      document.getElementById(viewer + 'Zoom').textContent = zoomLevels[viewer] + '%';
-    }
-
+<script>
     // Toggle heatmap overlay
-    document.getElementById('toggleHeatmap').addEventListener('change', function() {
-      const overlay = document.getElementById('heatmapOverlay');
-      if(overlay) {
-          overlay.style.opacity = this.checked ? '1' : '0';
-      }
+    document.getElementById('toggleHeatmap').addEventListener('change', function () {
+        const overlay = document.getElementById('heatmapOverlay');
+        if (overlay) {
+            overlay.style.opacity = this.checked ? '1' : '0';
+        }
     });
 
-    // View mode toggle
-    const viewButtons = ['viewSideBySide', 'viewOverlay'];
-    viewButtons.forEach(id => {
-      document.getElementById(id).addEventListener('click', function() {
-        viewButtons.forEach(btnId => {
-          const btn = document.getElementById(btnId);
-          btn.classList.remove('bg-emerald-600', 'text-white');
-          btn.classList.add('text-gray-400');
-        });
-        this.classList.remove('text-gray-400');
-        this.classList.add('bg-emerald-600', 'text-white');
-      });
-    });
-
+    // Approval Functions
     function approveReport() {
-        alert("Report Approved!");
+        document.getElementById('validationPending').classList.add('hidden');
+        document.getElementById('validationComplete').classList.remove('hidden');
+        document.getElementById('validationButtons').classList.add('hidden');
+
+        const now = new Date();
+        document.getElementById('approvalTimestamp').textContent = now.toISOString().split('.')[0].replace('T', ' ') + ' UTC';
+
+        setTimeout(() => {
+            document.getElementById('approvedStamp').classList.add('visible');
+        }, 100);
     }
-  </script>
+
+    function requestAmendment() {
+        alert('Amendment workflow initiated.');
+    }
+
+    function rejectReport() {
+        alert('Report rejected. Sent back for manual review.');
+    }
+</script>
 </body>
 </html>

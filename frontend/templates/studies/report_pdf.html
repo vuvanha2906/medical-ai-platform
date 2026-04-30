@@ -1,10 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <title>Medical Diagnostic Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #1a202c;
+        }
+        .report-header {
+            border-bottom: 3px solid #0f766e;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .hospital-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f766e;
+            margin-bottom: 5px;
+        }
+        .report-subtitle {
+            font-size: 12px;
+            color: #64748b;
+        }
+        .section-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f766e;
+            margin: 20px 0 10px 0;
+            border-bottom: 1px solid #d1fae5;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .info-table td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-table td:first-child {
+            background-color: #f1f5f9;
+            font-weight: bold;
+            width: 35%;
+            color: #0f766e;
+        }
+        .findings-table th {
+            background-color: #0f766e;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        .findings-table td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .image-table td {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            text-align: center;
+            width: 50%;
+            vertical-align: top;
+        }
+        .image-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #0f766e;
+            display: block;
+            margin-bottom: 10px;
+        }
+        img {
+            max-width: 280px;
+            max-height: 280px;
+            border: 1px solid #cbd5e1;
+        }
+        .footer-disclaimer {
+            background-color: #f0fdf4;
+            border-left: 4px solid #0f766e;
+            padding: 15px;
+            margin-top: 30px;
+            font-size: 10px;
+            color: #1e3a1f;
+        }
+    </style>
 </head>
 <body>
-$END$
+    <div class="report-header">
+        <div class="hospital-name">MediAI Diagnostics Center</div>
+        <div class="report-subtitle">Automated AI Diagnostic Report</div>
+        <div class="report-subtitle">Generated: <strong>{{ study.created_at|date:"F d, Y | H:i" }}</strong></div>
+    </div>
+
+    <div class="section-header">PATIENT INFORMATION</div>
+    <table class="info-table">
+        <tr>
+            <td>Study ID</td>
+            <td>STD-{{ study.id }}</td>
+        </tr>
+        <tr>
+            <td>Patient Name</td>
+            <td>{{ study.patient_name }}</td>
+        </tr>
+        <tr>
+            <td>Modality</td>
+            <td>{{ study.modality|default:"Unknown" }}</td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>{{ study.status }}</td>
+        </tr>
+    </table>
+
+    <div class="section-header">CLINICAL FINDINGS</div>
+    <table class="findings-table">
+        <thead>
+            <tr>
+                <th>AI Prediction Label</th>
+                <th>Confidence Probability</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if prediction %}
+            <tr>
+                <td><strong>{{ prediction.prediction_label }}</strong></td>
+                <td>{{ prediction.probability }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="2">No AI prediction results available for this study.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="section-header">IMAGING ANALYSIS</div>
+    <table class="image-table">
+        <tr>
+            <td>
+                <span class="image-label">Original Image</span>
+                {% if study.image %}
+                    <img src="{{ request.scheme }}://{{ request.get_host }}{{ study.image.url }}" alt="Original Image" />
+                {% else %}
+                    <p>No image available</p>
+                {% endif %}
+            </td>
+            <td>
+                <span class="image-label">AI Attention Map (Grad-CAM)</span>
+                {% if prediction and prediction.heatmap_url %}
+                    <img src="{{ request.scheme }}://{{ request.get_host }}{{ prediction.heatmap_url }}" alt="AI Heatmap" />
+                {% else %}
+                    <p>No heatmap available</p>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer-disclaimer">
+        <strong>MEDICAL DISCLAIMER:</strong> This report is generated by an AI diagnostic system and is intended to assist healthcare professionals in clinical decision-making. The AI predictions should be reviewed and validated by a qualified radiologist or physician before clinical use.
+    </div>
 </body>
 </html>
