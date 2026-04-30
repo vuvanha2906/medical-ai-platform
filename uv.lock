@@ -2121,7 +2121,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "redis", specifier = ">=5.0" },
     { name = "reportlab", marker = "extra == 'report'", specifier = ">=4.2" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "scikit-learn", specifier = ">=1.4" },
     { name = "scipy", specifier = ">=1.13" },
     { name = "seaborn", marker = "extra == 'experiment'", specifier = ">=0.13" },
