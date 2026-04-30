@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import render, HttpResponse, get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Study, Prediction
@@ -12,6 +12,8 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
+from .utils import render_to_pdf  # Kéo tính năng PDF vào
+
 
 class StudyUploadView(generics.CreateAPIView):
     """
@@ -22,7 +24,7 @@ class StudyUploadView(generics.CreateAPIView):
     serializer_class = StudySerializer
 
     def post(self, request, *args, **kwargs):
-        # DRF’s request.data can be immutable (e.g., QueryDict), so copy it.
+        # DRF?s request.data can be immutable (e.g., QueryDict), so copy it.
         data = request.data.copy()
 
         # If the frontend does not supply a patient_name, generate an anonymous one.
@@ -48,11 +50,14 @@ def DashboardView(request):
     studies_list = Study.objects.all().order_by('-id')
     return render(request, 'studies/dashboard.html', {'studies': studies_list})
 
+
 def XrayAnalysisView(request):
     return HttpResponse("X-ray Analysis Module coming soon")
 
+
 def MriAlzheimerView(request):
     return HttpResponse("MRI Alzheimer Module coming soon")
+
 
 class StudyListCreateView(generics.ListCreateAPIView):
     queryset = Study.objects.all()
@@ -68,6 +73,7 @@ class StudyListCreateView(generics.ListCreateAPIView):
 
         # Return the task ID immediately
         return JsonResponse({'task_id': task.id})
+
 
 class StudyDetailView(generics.RetrieveAPIView):
     queryset = Study.objects.all()
@@ -95,6 +101,7 @@ class StudyDetailView(generics.RetrieveAPIView):
                 'heatmap_url': None
             })
 
+
 class TaskStatusView(generics.GenericAPIView):
     def get(self, request, task_id):
         task_result = AsyncResult(task_id)
@@ -113,6 +120,7 @@ class TaskStatusView(generics.GenericAPIView):
         else:
             return JsonResponse({'status': 'Processing'})
 
+
 class StudyListView(ListView):
     """
     Displays a list of all studies, ordered by newest first.
@@ -120,65 +128,84 @@ class StudyListView(ListView):
     model = Study
     template_name = "studies/study_list.html"
     context_object_name = "studies"
-    paginate_by = 25  # Optional pagination; adjust as needed
-
-    def get_queryset(self):
-        # Order by creation date descending (newest first).
-        # If `created_at` does not exist, fallback to ordering by primary key.
-        if hasattr(Study, "created_at"):
-            return Study.objects.all().order_by("-created_at")
-        return Study.objects.all().order_by("-id")
-
-class ReportListView(ListView):
-    """
-    Trang Reports: Chỉ hiển thị danh sách các ca đã phân tích xong (Completed).
-    Tái sử dụng lại giao diện bảng của trang study_list.
-    """
-    model = Study
-    template_name = "studies/report_detail.html"
-    context_object_name = "studies"
     paginate_by = 25
 
     def get_queryset(self):
         if hasattr(Study, "created_at"):
-            return Study.objects.filter(status='Completed').order_by('-created_at')
-        return Study.objects.filter(status='Completed').order_by('-id')
+            return Study.objects.all().order_by("-created_at")
+        return Study.objects.all().order_by("-id")
+
+class ReportDetailView(DetailView):
+    """
+    Shows the AI diagnostic report for a specific study.
+    """
+    model = Study
+    template_name = "studies/report_detail.html"
+    context_object_name = "study"
+    pk_url_kwarg = "pk"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            prediction = Prediction.objects.get(study=self.object)
+            context["prediction"] = prediction
+        except Prediction.DoesNotExist:
+            context["prediction"] = None
+        return context
+
+
+# ---> TÍNH NĂNG MỚI ĐƯỢC CHÈN VÀO ĐÂY <---
+class DownloadReportPDFView(DetailView):
+    """
+    Generates and downloads a PDF version of the AI diagnostic report.
+    """
+    model = Study
+    template_name = "studies/report_pdf.html"
+    pk_url_kwarg = "pk"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        try:
+            prediction = Prediction.objects.get(study=self.object)
+        except Prediction.DoesNotExist:
+            prediction = None
+
+        context = {
+            "study": self.object,
+            "prediction": prediction,
+        }
+
+        pdf_response = render_to_pdf(self.template_name, context)
+        return pdf_response
+
+
+# ----------------------------------------
 
 class AnalyticsView(TemplateView):
     """
     Serves the analytics dashboard page (`analytics.html`).
-    The page will later fetch data from `AnalyticsDataView` via AJAX.
     """
     template_name = "studies/analytics.html"
 
+
 class AnalyticsDataView(APIView):
     """
-    API endpoint trả về dữ liệu tổng hợp (aggregated data) cho biểu đồ trên trang Analytics.
+    API endpoint trả về dữ liệu tổng hợp.
     """
     def get(self, request, *args, **kwargs):
-        # 1. Tổng số ca phân tích (Total Studies)
         total_studies = Study.objects.count()
-
-        # 2. Phân bố theo loại ảnh chụp (Modality Distribution)
-        # Kết quả: [{'modality': 'X-ray', 'count': 50}, {'modality': 'MRI', 'count': 20}]
         modality_counts = Study.objects.values('modality').annotate(count=Count('id')).order_by('-count')
-
-        # 3. Phân bố theo trạng thái (Status Distribution)
-        # Kết quả: [{'status': 'Completed', 'count': 80}, {'status': 'Processing', 'count': 5}]
         status_counts = Study.objects.values('status').annotate(count=Count('id')).order_by('-count')
 
-        # 4. Xu hướng số ca phân tích trong 7 ngày qua (7-day Trend)
-        # Nhóm dữ liệu theo ngày để vẽ biểu đồ đường (Line chart)
         seven_days_ago = timezone.now() - timedelta(days=7)
         trend_data = (
             Study.objects.filter(created_at__gte=seven_days_ago)
-            .annotate(date=TruncDate('created_at'))  # Ép kiểu datetime về date
+            .annotate(date=TruncDate('created_at'))
             .values('date')
             .annotate(count=Count('id'))
             .order_by('date')
         )
 
-        # Đóng gói dữ liệu trả về cho frontend
         data = {
             'total_studies': total_studies,
             'modality_distribution': list(modality_counts),
