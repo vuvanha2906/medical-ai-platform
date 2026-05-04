@@ -13,6 +13,10 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
 from .utils import render_to_pdf  # Kéo tính năng PDF vào
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from rest_framework.permissions import IsAuthenticated
+from celery.result import AsyncResult
 
 
 class StudyUploadView(generics.CreateAPIView):
@@ -20,11 +24,12 @@ class StudyUploadView(generics.CreateAPIView):
     Endpoint to upload a new study (image + metadata).
     Handles missing `patient_name` by generating an anonymous identifier.
     """
+    permission_classes = [IsAuthenticated]
     queryset = Study.objects.all()
     serializer_class = StudySerializer
 
     def post(self, request, *args, **kwargs):
-        # DRF?s request.data can be immutable (e.g., QueryDict), so copy it.
+        # DRF's request.data can be immutable (e.g., QueryDict), so copy it.
         data = request.data.copy()
 
         # If the frontend does not supply a patient_name, generate an anonymous one.
@@ -46,20 +51,24 @@ class StudyUploadView(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@login_required
 def DashboardView(request):
     studies_list = Study.objects.all().order_by('-id')
     return render(request, 'studies/dashboard.html', {'studies': studies_list})
 
 
+@login_required
 def XrayAnalysisView(request):
     return HttpResponse("X-ray Analysis Module coming soon")
 
 
+@login_required
 def MriAlzheimerView(request):
     return HttpResponse("MRI Alzheimer Module coming soon")
 
 
 class StudyListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
     queryset = Study.objects.all()
     serializer_class = StudySerializer
 
@@ -76,6 +85,7 @@ class StudyListCreateView(generics.ListCreateAPIView):
 
 
 class StudyDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
     queryset = Study.objects.all()
     serializer_class = StudySerializer
 
@@ -103,6 +113,7 @@ class StudyDetailView(generics.RetrieveAPIView):
 
 
 class TaskStatusView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, task_id):
         task_result = AsyncResult(task_id)
         if task_result.ready():
@@ -121,7 +132,7 @@ class TaskStatusView(generics.GenericAPIView):
             return JsonResponse({'status': 'Processing'})
 
 
-class StudyListView(ListView):
+class StudyListView(LoginRequiredMixin, ListView):
     """
     Displays a list of all studies, ordered by newest first.
     """
@@ -135,7 +146,7 @@ class StudyListView(ListView):
             return Study.objects.all().order_by("-created_at")
         return Study.objects.all().order_by("-id")
 
-class ReportDetailView(DetailView):
+class ReportDetailView(LoginRequiredMixin, DetailView):
     """
     Shows the AI diagnostic report for a specific study.
     """
@@ -155,7 +166,7 @@ class ReportDetailView(DetailView):
 
 
 # ---> TÍNH NĂNG MỚI ĐƯỢC CHÈN VÀO ĐÂY <---
-class DownloadReportPDFView(DetailView):
+class DownloadReportPDFView(LoginRequiredMixin, DetailView):
     """
     Generates and downloads a PDF version of the AI diagnostic report.
     """
@@ -181,7 +192,7 @@ class DownloadReportPDFView(DetailView):
 
 # ----------------------------------------
 
-class AnalyticsView(TemplateView):
+class AnalyticsView(LoginRequiredMixin, TemplateView):
     """
     Serves the analytics dashboard page (`analytics.html`).
     """
@@ -192,6 +203,7 @@ class AnalyticsDataView(APIView):
     """
     API endpoint trả về dữ liệu tổng hợp.
     """
+    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         total_studies = Study.objects.count()
         modality_counts = Study.objects.values('modality').annotate(count=Count('id')).order_by('-count')

@@ -109,3 +109,7 @@ CELERY_TASK_ALWAYS_EAGER = True  # For local testing without Redis
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'
+
+# new
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'

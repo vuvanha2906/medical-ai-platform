@@ -10,20 +10,17 @@
 ## Current Implementation Overview
 
 ### 1. Active Django Apps & Models
-* **`studies` App:**
-  * `Study`: Integer ID (Auto-increment), `patient_name`, `image` (X-ray/MRI/CT/US), `created_at`, `status` (Processing/Completed/Pending/Failed), `modality`.
-  * `Prediction`: FK to `Study`, `prediction_label`, `probability`, `heatmap_url`.
-* **`users` App:** Custom `CustomUser` model (AbstractBaseUser).
+* **`studies` App:** `Study` (Integer ID, patient info, modality, status) and `Prediction` (FK to Study, label, probability, heatmap_url).
+* **`users` App:** Custom `CustomUser` model handling system authentication.
 
-### 2. End-to-End Architecture
-1. **Image Upload:** User uploads via UI -> `StudyUploadView` creates `Study` record & anonymous name -> Triggers `process_xray_study` Celery task -> Returns JSON status.
-2. **AI Inference (`studies/tasks.py`):** Loads image -> Preprocesses -> Runs PyTorch `XrayPredictor` -> Generates Grad-CAM -> Saves to `Prediction` model.
+### 2. End-to-End Architecture & Security
+1. **Authentication:** Integrated Django Auth. Custom Glassmorphism login page (`users/login.html`). All main views and APIs are secured using `LoginRequiredMixin` and `@login_required` / `IsAuthenticated`.
+2. **Image Upload & Processing:** Authenticated user uploads via UI -> `StudyUploadView` creates record -> Celery task `process_xray_study` runs PyTorch inference -> Generates Grad-CAM -> Saves to DB.
 3. **UI/UX Flow:**
-  * `Dashboard`: Landing page showing recent uploads and upload form.
-  * `Studies`: Main data table displaying the history of all studies. Serves as the gateway to detailed reports.
-  * `Report Detail`: Shows patient info, AI prediction stats, Original vs Heatmap visual comparison (Side-by-side/Overlay), and provides PDF Export functionality.
-  * `Analytics`: Charts and summaries fetched from `api/analytics/` (`AnalyticsDataView`).
+  * `Dashboard` & `Studies`: Secured history and upload gateways.
+  * `Report Detail`: Visual xAI comparison and PDF Export functionality.
+  * `Analytics`: Chart.js dashboards rendering metrics from secured APIs.
 
 ## Immediate Next Steps
-* Fine-tune the PyTorch model on specific medical datasets to improve accuracy across different modalities.
-* Implement user authentication (Login/Logout) and role-based access control (Radiologist vs. Admin).
+* Integrate the custom Chest X-ray training dataset.
+* Write the PyTorch training loop (`train.py`) to fine-tune the model locally on Windows.
