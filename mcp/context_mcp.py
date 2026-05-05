@@ -8,7 +8,9 @@ mcp = FastMCP("MedicalAI_Context_Server")
 
 @mcp.tool()
 def get_recent_git_history(num_commits: int = 5) -> str:
-    """Lấy lịch sử các thay đổi (commit) gần nhất của dự án."""
+    """Lấy lịch sử các thay đổi (commit) gần nhất của dự án.
+    Câu lệnh để gọi: Hãy gọi tool generate_and_save_report để tạo báo cáo tiến độ dự án hiện tại
+    """
     try:
         # SỬA: Tách riêng cờ '-n' và giá trị, thêm encoding='utf-8'
         result = subprocess.run(
