@@ -7,7 +7,6 @@ Web-based Medical Image Diagnosis using Deep Learning
 
 ## Tech stack
 
-
 | Layer | Library |
 |---|---|
 | Web | Django 4.2, DRF, SimpleJWT |
@@ -27,14 +26,14 @@ Dự án sử dụng `uv` để quản lý Python và các thư viện một cá
 
 *   **Trên Ubuntu (Linux):**
     ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
     # Sau đó chạy lệnh dưới để cập nhật PATH (hoặc khởi động lại terminal)
     source $HOME/.cargo/env
     ```
 *   **Trên Windows:**
     Mở PowerShell và chạy:
     ```powershell
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    powershell -ExecutionPolicy ByPass -c "irm [https://astral.sh/uv/install.ps1](https://astral.sh/uv/install.ps1) | iex"
     ```
 
 ### 2. Khởi tạo Python và Môi trường ảo
@@ -69,10 +68,11 @@ Vì PyTorch quản lý wheel ở các index riêng, cách tốt nhất với `uv
     ```
 
 *   **Môi trường GPU (Training thật):**
-    Kiểm tra phiên bản CUDA bằng lệnh `nvidia-smi` hoặc `nvcc --version` và chọn index phù hợp (Ví dụ CUDA 12.1 sử dụng `cu121`):
+    Kiểm tra phiên bản CUDA bằng lệnh `nvidia-smi` hoặc `nvcc --version` và chọn index phù hợp (Ví dụ GTX 5060 8GB CUDA version 13.2 sử dụng `/nightly/cu132`):
     ```bash
-    uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    uv pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu132
     ```
+    Tham khảo https://pytorch.org/ để kiểm tra phiên bản CUDA
 
 ### 5. Cấu hình môi trường
 
@@ -121,6 +121,10 @@ medical_ai_platform/
 ├── .env.example
 ├── docker-compose.yml
 │
+├── notebooks/              ← Jupyter notebooks (Training, EDA, Experiments)
+│   ├── 01_nih_chest_xray_training.ipynb
+│   └── 02_alzheimer_mri_training.ipynb
+│
 ├── backend/
 │   ├── manage.py
 │   ├── config/
@@ -146,6 +150,16 @@ medical_ai_platform/
 └── tests/
 ```
 ---
+
+## Model Training & Research
+Quá trình nghiên cứu (EDA) và huấn luyện (Training & Fine-tuning) các mô hình PyTorch được thực hiện độc lập và mã nguồn được lưu trữ tại thư mục notebooks/.
+
+Bạn có thể xem hoặc chạy trực tiếp mã nguồn Training trên Kaggle với dữ liệu và GPU đã được thiết lập sẵn:
+
+- 🔗 Kaggle Notebook: NIH Chest X-ray 14 - DenseNet121 Training https://www.kaggle.com/code/vuvanha2906/nih-chest-x-ray-14-densenet121-pytorch
+
+- (Các link training khác sẽ được cập nhật...)
+
 
 ## Datasets
 

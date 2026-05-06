@@ -15,33 +15,26 @@ dependencies = [
     "django-cors-headers>=4.3",
     "djangorestframework-simplejwt>=5.3",
     "django-filter>=24.1",
-
     # ── Database ───────────────────────────────────────────────────────
     "psycopg2-binary>=2.9",          # PostgreSQL adapter
-
     # ── Async task queue ───────────────────────────────────────────────
     "celery>=5.4",
     "redis>=5.0",
     "django-celery-results>=2.5",
     "django-celery-beat>=2.6",
-
     # ── Storage ────────────────────────────────────────────────────────
     "pillow>=10.3",                  # image I/O & processing
     "boto3>=1.34",                   # S3-compatible storage (optional, for prod)
     "django-storages>=1.14",
-
     # ── Deep learning core ─────────────────────────────────────────────
     "torch>=2.0",                    # Đã khai báo tường minh để uv dễ map index
     "torchvision>=0.18",
-
     # ── Explainable AI ─────────────────────────────────────────────────
     "grad-cam>=1.5",                 # pytorch-grad-cam
-
     # ── Medical imaging ────────────────────────────────────────────────
     "nibabel>=5.2",                  # NIfTI (.nii/.nii.gz) for MRI
     "nilearn>=0.10",                 # brain image processing / normalization
     "SimpleITK>=2.3",                # image registration & skull stripping helper
-
     # ── Scientific computing ───────────────────────────────────────────
     "numpy>=1.26",
     "scipy>=1.13",
@@ -49,7 +42,6 @@ dependencies = [
     "pandas>=2.2",
     "opencv-python-headless>=4.9",   # image ops (headless = no GUI dep)
     "matplotlib>=3.8",
-
     # ── Utilities & Reporting ──────────────────────────────────────────
     "python-dotenv>=1.0",
     "pydantic>=2.7",
@@ -59,6 +51,10 @@ dependencies = [
     "djangorestframework-stubs>=3.16.9",
     "celery-types>=0.26.0",
     "xhtml2pdf>=0.2.11",             # Phục vụ xuất Report PDF
+    "mcp>=1.27.0",
+    "ipykernel>=7.2.0",
+    "albumentations>=2.0.8",
+    "jupyter>=1.1.1",
 ]
 
 # Chuẩn PEP 735 mới nhất của uv cho ứng dụng (thay thế cho tool.uv.dev-dependencies)
@@ -89,18 +85,26 @@ experiment = [
 
 [tool.uv]
 managed = true
+environments = ["sys_platform == 'win32'"]
 
 [tool.uv.sources]
 # Cấu hình đa nền tảng (Windows & Ubuntu)
 # Ép uv sử dụng bản CPU để phát triển web nhẹ nhàng.
 # CHÚ Ý: Khi bạn train model trên Windows với GTX, hãy comment 2 dòng này lại
-# để uv tự động tải bản CUDA 12.1 mặc định từ PyPI.
-torch = { index = "pytorch-cpu" }
-torchvision = { index = "pytorch-cpu" }
+# để uv tự động tải bản CUDA mặc định từ PyPI.
+# Ngoài ra, cần phải check thông số phù hợp với GTX
+
+# Use cpu
+#torch = { index = "pytorch-cpu" }
+#torchvision = { index = "pytorch-cpu" }
+
+# Use GTX (for training or demo)
+torch = { index = "pytorch-nightly" }
+torchvision = { index = "pytorch-nightly" }
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-nightly"
+url = "https://download.pytorch.org/whl/nightly/cu132"
 explicit = true
 
 [tool.ruff]
