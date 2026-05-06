@@ -21,3 +21,5 @@ uploads/
 
 # Biến môi trường
 .env
+
+.pth

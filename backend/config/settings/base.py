@@ -4,6 +4,14 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# PROJECT_ROOT trỏ tới thư mục gốc (medical_ai_platform/)
+PROJECT_ROOT = BASE_DIR.parent
+
+# CẤU HÌNH MEDIA
+MEDIA_URL = '/media/'
+# Thư mục media sẽ nằm ở cấp cao nhất của dự án
+MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-+*y%jv&^n^*t_#*!$*h5x8g@k*9s0p#*^*z^*r*'
 
@@ -113,3 +121,4 @@ AUTH_USER_MODEL = 'users.CustomUser'
 # new
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+

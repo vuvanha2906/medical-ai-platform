@@ -1,71 +1,77 @@
 import torch
-import torch.nn.functional as F
-from torchvision import transforms
-from torchvision.models import densenet121
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from PIL import Image
 import numpy as np
-from typing import Dict
+from PIL import Image
+from torchvision import transforms
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from .model import NIH_DenseNet121
+from .grad_cam import XRayGradCAM
+
+# Danh sách 14 bệnh chuẩn của NIH theo thứ tự
+DISEASES = [
+    'Atelectasis', 'Cardiomegaly', 'Effusion', 'Infiltration', 'Mass', 'Nodule',
+    'Pneumonia', 'Pneumothorax', 'Consolidation', 'Edema', 'Emphysema',
+    'Fibrosis', 'Pleural_Thickening', 'Hernia'
+]
 
 
 class XrayPredictor:
-    def __init__(self):
-        # Load the pre-trained DenseNet121 model
-        self.model = densenet121(weights='IMAGENET1K_V1')
-        self.model.eval()
+    def __init__(self, weights_path):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Initializing XrayPredictor on {self.device}...")
+
+        # 1. Khởi tạo model và nạp trọng số bạn vừa train
+        self.model = NIH_DenseNet121(num_classes=14)
+        self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
+        self.model.eval()
         self.model.to(self.device)
 
-        # Define the transformation pipeline
+        # 2. Tiền xử lý ảnh
         self.transform = transforms.Compose([
-            transforms.Resize(224),
-            transforms.CenterCrop(224),
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
 
-        # Initialize Grad-CAM
-        # The last layer of densenet121.features is the final convolutional block.
-        self.grad_cam = GradCAM(model=self.model, target_layers=[self.model.features[-1]])
+        # 3. Cài đặt Grad-CAM (Chỉ vào block conv cuối cùng của DenseNet121)
+        target_layer = self.model.model.features[-1]
+        self.grad_cam = XRayGradCAM(model=self.model, target_layer=target_layer)
 
-    def preprocess_image(self, image_path: str) -> torch.Tensor:
-        """Preprocess the image for inference."""
-        with Image.open(image_path).convert('RGB') as img:
-            return self.transform(img).unsqueeze(0).to(self.device)
+    def predict_and_explain(self, image_path: str, output_heatmap_path: str) -> dict:
+        """
+        Dự đoán bệnh và sinh ra ảnh xAI lưu thẳng vào ổ cứng.
+        """
+        # Đọc ảnh gốc bằng PIL và resize về 224x224 để vẽ heatmap lên
+        original_img = Image.open(image_path).convert('RGB')
+        original_img_resized = original_img.resize((224, 224))
+        np_img = np.array(original_img_resized)
 
-    def predict(self, image_path: str) -> dict:
-        """Predict the probabilities of the classes for the given image."""
+        # Tiền xử lý thành Tensor
+        input_tensor = self.transform(original_img_resized).unsqueeze(0).to(self.device)
+
+        # Chạy mô hình
         with torch.no_grad():
-            input_tensor = self.preprocess_image(image_path)
-            output = self.model(input_tensor)
-            probabilities = F.softmax(output, dim=1)
-            _, predicted_idx = torch.max(probabilities, 1)
-            predicted_class = predicted_idx.item()
-            class_probabilities = {str(i): prob.item() for i, prob in enumerate(probabilities[0])}
+            outputs = self.model(input_tensor)
+            # SỬ DỤNG SIGMOID THAY CHO SOFTMAX!
+            probs = torch.sigmoid(outputs)[0].cpu().numpy()
+
+        # Tạo từ điển kết quả (Bệnh -> Xác suất)
+        results = {DISEASES[i]: float(probs[i]) for i in range(14)}
+
+        # Tìm bệnh có xác suất cao nhất (Primary Finding)
+        best_class_idx = np.argmax(probs)
+        best_class_name = DISEASES[best_class_idx]
+        best_prob = float(probs[best_class_idx])
+
+        # SINH XAI HEATMAP CHO BỆNH CAO NHẤT ĐÓ
+        # ClassifierOutputTarget giúp Grad-CAM biết cần tính đạo hàm cho class nào
+        targets = [ClassifierOutputTarget(best_class_idx)]
+        heatmap_img = self.grad_cam.generate(input_tensor, np_img, targets)
+
+        # Lưu ảnh heatmap ra thư mục media của Django
+        Image.fromarray(heatmap_img).save(output_heatmap_path)
 
         return {
-            'predicted_class': predicted_class,
-            'probabilities': class_probabilities
+            'predicted_class': best_class_name,
+            'probability': f"{best_prob * 100:.2f}%",
+            'all_probabilities': results
         }
-
-
-def generate_heatmap(self, image_path: str, output_path: str) -> None:
-    """Generate and save the Grad-CAM heatmap for the given image."""
-    input_tensor = self.preprocess_image(image_path)
-    target_category = None  # Use the predicted class by default
-
-    # Generate the Grad-CAM heatmap
-    grayscale_cam = self.grad_cam(input_tensor=input_tensor, target_category=target_category)
-    grayscale_cam = grayscale_cam[0, :]
-
-    # Convert the input tensor back to a NumPy array
-    input_image = input_tensor.squeeze(0).cpu().numpy().transpose(1, 2, 0)
-    input_image = (input_image * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]) * 255
-    input_image = np.clip(input_image, 0, 255).astype(np.uint8)
-
-    # Overlay the heatmap on the input image
-    cam_image = show_cam_on_image(input_image, grayscale_cam, use_rgb=True)
-
-    # Save the heatmap
-    Image.fromarray(cam_image).save(output_path)
