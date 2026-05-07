@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Study, Prediction
 from .serializers import StudySerializer
-from apps.ai_engine.tasks import process_xray_study
+from .tasks import process_xray_study
 import uuid
 from django.views.generic import TemplateView, ListView, DetailView
 from rest_framework.views import APIView
@@ -12,7 +12,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
-from .utils import render_to_pdf  # Kéo tính năng PDF vào
+from .utils import render_to_pdf
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
@@ -24,29 +24,32 @@ class StudyUploadView(generics.CreateAPIView):
     Endpoint to upload a new study (image + metadata).
     Handles missing `patient_name` by generating an anonymous identifier.
     """
-    permission_classes = [IsAuthenticated]
     queryset = Study.objects.all()
     serializer_class = StudySerializer
 
     def post(self, request, *args, **kwargs):
-        # DRF's request.data can be immutable (e.g., QueryDict), so copy it.
-        data = request.data.copy()
+        # 1. Mở khóa QueryDict để có thể chỉnh sửa dữ liệu mà không cần copy file
+        if hasattr(request.data, '_mutable'):
+            request.data._mutable = True
 
-        # If the frontend does not supply a patient_name, generate an anonymous one.
-        if not data.get('patient_name'):
+        # 2. Thêm tên ẩn danh nếu user không nhập
+        if not request.data.get('patient_name'):
             anon_name = f"Anonymous_Patient_{uuid.uuid4().hex[:6]}"
-            data['patient_name'] = anon_name
+            request.data['patient_name'] = anon_name
 
-        # Use the serializer with the (potentially) augmented data.
-        serializer = self.get_serializer(data=data)
+        # 3. Khóa QueryDict lại cho an toàn
+        if hasattr(request.data, '_mutable'):
+            request.data._mutable = False
+
+        # 4. Đưa dữ liệu vào serializer như bình thường
+        serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             study = serializer.save()
-            # Trigger Celery task for AI processing.
+            # Kích hoạt Celery task để AI xử lý
             process_xray_study.delay(study.id, study.image.path)
             return Response({'study_id': study.id, 'status': 'Processing'}, status=status.HTTP_201_CREATED)
 
-        # Print serializer errors to the terminal for debugging (as requested earlier).
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

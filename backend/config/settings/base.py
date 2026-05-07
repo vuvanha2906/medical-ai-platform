@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'apps.users',
     'apps.studies',
-    'apps.ai_engine',
 ]
 
 MIDDLEWARE = [
@@ -114,6 +113,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_ENABLE_UTC = True
 CELERY_TASK_ALWAYS_EAGER = True  # For local testing without Redis
+CELERY_TASK_EAGER_PROPAGATES = True
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.CustomUser'

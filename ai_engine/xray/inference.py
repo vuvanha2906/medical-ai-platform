@@ -1,8 +1,10 @@
 import torch
 import numpy as np
+import pydicom
 from PIL import Image
 from torchvision import transforms
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from pytorch_grad_cam.utils.image import show_cam_on_image
 from .model import NIH_DenseNet121
 from .grad_cam import XRayGradCAM
 
@@ -13,6 +15,7 @@ DISEASES = [
     'Fibrosis', 'Pleural_Thickening', 'Hernia'
 ]
 
+THRESHOLD = 0.3
 
 class XrayPredictor:
     def __init__(self, weights_path):
@@ -36,42 +39,95 @@ class XrayPredictor:
         target_layer = self.model.model.features[-1]
         self.grad_cam = XRayGradCAM(model=self.model, target_layer=target_layer)
 
-    def predict_and_explain(self, image_path: str, output_heatmap_path: str) -> dict:
-        """
-        Dự đoán bệnh và sinh ra ảnh xAI lưu thẳng vào ổ cứng.
-        """
-        # Đọc ảnh gốc bằng PIL và resize về 224x224 để vẽ heatmap lên
+    def load_image(self, image_path: str) -> Image.Image:
+        """Đọc file ảnh, hỗ trợ cả DICOM và PNG/JPG/JPEG."""
+        if image_path.lower().endswith(('.dcm', '.dicom')):
+            # Xử lý DICOM
+            dicom_data = pydicom.dcmread(image_path)
+            img_array = dicom_data.pixel_array.astype(np.float32)
+
+            # Chuẩn hóa mức xám về [0, 255]
+            img_array = img_array - np.min(img_array)
+            if np.max(img_array) > 0:
+                img_array = img_array / np.max(img_array)
+            img_array = (img_array * 255).astype(np.uint8)
+
+            # Xử lý trường hợp MONOCHROME1 (Màu bị đảo ngược: Xương màu đen, nền trắng)
+            if hasattr(dicom_data,
+                       'PhotometricInterpretation') and dicom_data.PhotometricInterpretation == 'MONOCHROME1':
+                img_array = 255 - img_array
+
+            return Image.fromarray(img_array).convert('RGB')
+        else:
+            # Đọc các định dạng ảnh thông thường
+            return Image.open(image_path).convert('RGB')
+
+    def predict_and_explain(self, image_path: str, output_heatmap_base_path: str) -> dict:
         original_img = Image.open(image_path).convert('RGB')
         original_img_resized = original_img.resize((224, 224))
         np_img = np.array(original_img_resized)
 
-        # Tiền xử lý thành Tensor
         input_tensor = self.transform(original_img_resized).unsqueeze(0).to(self.device)
 
-        # Chạy mô hình
         with torch.no_grad():
             outputs = self.model(input_tensor)
-            # SỬ DỤNG SIGMOID THAY CHO SOFTMAX!
             probs = torch.sigmoid(outputs)[0].cpu().numpy()
 
-        # Tạo từ điển kết quả (Bệnh -> Xác suất)
         results = {DISEASES[i]: float(probs[i]) for i in range(14)}
 
-        # Tìm bệnh có xác suất cao nhất (Primary Finding)
-        best_class_idx = np.argmax(probs)
-        best_class_name = DISEASES[best_class_idx]
-        best_prob = float(probs[best_class_idx])
+        # Lọc các bệnh vượt ngưỡng (Threshold ví dụ = 0.4 hoặc 0.5)
+        detected_diseases = {disease: prob for disease, prob in results.items() if prob >= THRESHOLD}
 
-        # SINH XAI HEATMAP CHO BỆNH CAO NHẤT ĐÓ
-        # ClassifierOutputTarget giúp Grad-CAM biết cần tính đạo hàm cho class nào
-        targets = [ClassifierOutputTarget(best_class_idx)]
-        heatmap_img = self.grad_cam.generate(input_tensor, np_img, targets)
+        # Dictionary lưu đường dẫn heatmap cho từng bệnh
+        # Format: {"Pneumonia": "/media/heatmaps/study_123_Pneumonia.png"}
+        heatmap_paths = {}
 
-        # Lưu ảnh heatmap ra thư mục media của Django
-        Image.fromarray(heatmap_img).save(output_heatmap_path)
+        img_normalized = np_img.astype(np.float32) / 255.0
+
+        if not detected_diseases:
+            # KHÔNG CÓ BỆNH (No Findings)
+            best_class_name = "No Findings"
+            best_prob = 0.0
+            has_disease = False
+            detected_str = "No Findings"
+
+            # Lưu ảnh gốc làm default heatmap
+            default_path = f"{output_heatmap_base_path}_original.png"
+            Image.fromarray(np_img).save(default_path)
+            heatmap_paths["Original"] = default_path
+
+        else:
+            # CÓ BỆNH
+            has_disease = True
+
+            # SINH HEATMAP RIÊNG CHO TỪNG BỆNH
+            for disease, prob in detected_diseases.items():
+                idx = DISEASES.index(disease)
+                targets = [ClassifierOutputTarget(idx)]
+
+                # Tính toán Grad-CAM cho RIÊNG bệnh này
+                grayscale_cam = self.grad_cam.cam(input_tensor=input_tensor, targets=targets)[0, :]
+
+                # Trộn màu (Mặc định GradCAM sẽ dùng dải màu Đỏ-Vàng-Xanh, độ đậm tùy vào grayscale_cam)
+                cam_image = show_cam_on_image(img_normalized, grayscale_cam, use_rgb=True)
+
+                # Lưu file riêng biệt cho bệnh này
+                specific_path = f"{output_heatmap_base_path}_{disease}.png"
+                Image.fromarray(cam_image).save(specific_path)
+
+                # Lưu lại đường dẫn
+                heatmap_paths[disease] = specific_path
+
+            # Primary Finding vẫn là bệnh có % cao nhất (để hiển thị thẻ bự nhất trên UI)
+            best_class_name = max(detected_diseases, key=detected_diseases.get)
+            best_prob = detected_diseases[best_class_name]
+            detected_str = ", ".join(list(detected_diseases.keys()))
 
         return {
             'predicted_class': best_class_name,
+            'detected_diseases': detected_str,
             'probability': f"{best_prob * 100:.2f}%",
-            'all_probabilities': results
+            'all_probabilities': results,
+            'has_disease': has_disease,
+            'heatmaps': heatmap_paths  # <--- TRẢ VỀ TOÀN BỘ DANH SÁCH ẢNH XAI
         }

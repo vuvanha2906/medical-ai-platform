@@ -138,12 +138,17 @@ medical_ai_platform/
 │   │
 │   └── apps/
 │       ├── users/          ← auth, JWT
-│       ├── studies/        ← Study + Prediction models
-│       └── ai_engine/      ← Celery tasks, inference wrappers
+│       └── studies/        ← Study + Prediction models
+│           
 │
 ├── ai_engine/
 │   ├── common/             ← base model, utils
 │   ├── xray/               ← DenseNet121, Grad-CAM
+│   │      ├── weights/
+│   │      │   └── best_nih_densenet121.pth  <-- Trọng số nằm ở đây
+│   │      ├── model.py
+│   │      ├── grad_cam.py
+│   │      └── inference.py
 │   └── alzheimer/          ← Multi-view CNN, NIfTI pipeline
 │
 ├── frontend/               ← Django templates + static

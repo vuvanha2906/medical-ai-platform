@@ -15,19 +15,26 @@ STATUS_CHOICES = [
     ('Failed', 'Failed')
 ]
 
+
 class Study(models.Model):
     patient_name = models.CharField(max_length=100)
-    modality = models.CharField(max_length=50)
+    image = models.FileField(upload_to='studies/')
+
+    modality = models.CharField(max_length=50, blank=True, null=True)
     status = models.CharField(max_length=50, default='Pending')
-    image = models.ImageField(upload_to='studies/')
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.patient_name} - {self.modality}"
 
+
 class Prediction(models.Model):
     study = models.OneToOneField(Study, on_delete=models.CASCADE, related_name='prediction')
-    results = models.JSONField()
+    prediction_label = models.CharField(max_length=255, null=True, blank=True)
+    probability = models.CharField(max_length=50, null=True, blank=True)
+    results = models.JSONField(default=dict, null=True, blank=True)
     heatmap_url = models.URLField(blank=True, null=True)
+    heatmaps = models.JSONField(default=dict, null=True, blank=True)
 
     def __str__(self):
         return f"Prediction for {self.study}"
