@@ -638,12 +638,19 @@
             // Khởi tạo thư viện NiiVue
             const nv = new niivue.Niivue({
                 show3Dcrosshair: true,
-                backColor: [0.05, 0.1, 0.2, 1],
+                backColor: [0.05, 0.1, 0.2, 1], // Màu nền Navy
                 textHeight: 0.04,
-                crosshairColor: [0.1, 0.7, 0.5, 1]
+                crosshairColor: [0.1, 0.7, 0.5, 1],
+                dragAndDropEnabled: false // Tắt kéo thả file ngoài vào canvas
             });
 
+            const canvas = document.getElementById('mri-canvas');
             nv.attachTo('mri-canvas');
+
+            // --- QUAN TRỌNG: CHẶN TRÌNH DUYỆT CUỘN TRANG KHI LĂN CHUỘT TRÊN MRI ---
+            canvas.addEventListener('wheel', function(e) {
+                e.preventDefault();
+            }, { passive: false });
 
             const sliderContainer = document.getElementById('slider-container');
             const slider = document.getElementById('slice-slider');
@@ -673,17 +680,11 @@
             if (volumeList.length > 0) {
                 nv.loadVolumes(volumeList).then(() => {
                     console.log("Tải thành công các lớp cắt MRI!");
-
-                    // Lệnh này ép NiiVue chia màn hình làm 3 (Axial, Coronal, Sagittal)
                     nv.setSliceType(nv.sliceTypeMultiplanar);
 
-                    // Hiển thị thanh trượt khi load xong
-                    if(sliderContainer) {
-                        sliderContainer.style.display = 'block';
-                    }
+                    if(sliderContainer) sliderContainer.style.display = 'block';
                 }).catch(err => {
                     console.error("Lỗi khi tải Volume NiiVue:", err);
-                    alert("Gặp sự cố khi nạp ảnh MRI. Vui lòng nhấn F12 mở Console để xem lỗi.");
                 });
             }
 
@@ -692,43 +693,36 @@
             const btn3DRender = document.getElementById('btn-3drender');
 
             btnMultiplanar.addEventListener('click', (e) => {
-                nv.setSliceType(nv.sliceTypeMultiplanar); // Đổi về 3 mặt cắt
-
-                // Đổi màu nút
+                nv.setSliceType(nv.sliceTypeMultiplanar);
                 e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
                 btn3DRender.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
-
                 if(sliderContainer) sliderContainer.style.display = 'block';
             });
 
             btn3DRender.addEventListener('click', (e) => {
-                nv.setSliceType(nv.sliceTypeRender); // Đổi về Render Thể tích 3D
-
-                // Đổi màu nút
+                nv.setSliceType(nv.sliceTypeRender);
                 e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
                 btnMultiplanar.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
-
                 if(sliderContainer) sliderContainer.style.display = 'none';
             });
 
-            // --- XỬ LÝ THANH TRƯỢT (SLIDER) ---
+            // --- ĐỒNG BỘ THANH TRƯỢT VÀ CUỘN CHUỘT ---
             if(slider) {
-                // Kéo thanh trượt -> đổi lát cắt
+                // 1. Khi User KÉO thanh trượt -> Đổi lát cắt Axial (Trục Z)
                 slider.addEventListener('input', (e) => {
                     let frac = parseFloat(e.target.value);
                     sliderValue.textContent = frac.toFixed(2);
 
-                    // Cập nhật vị trí Z (0 đến 1)
                     if (nv.scene && nv.scene.crosshairPos) {
-                        let currentPos = nv.scene.crosshairPos;
-                        nv.setCrosshair([currentPos[0], currentPos[1], frac]);
+                        let pos = nv.scene.crosshairPos;
+                        nv.setCrosshair([pos[0], pos[1], frac]); // Giữ nguyên X, Y, chỉ đổi Z
                     }
                 });
 
-                // Cuộn chuột trên ảnh -> thanh trượt chạy theo
+                // 2. Khi User CUỘN CHUỘT hoặc CLICK đổi vị trí trên NiiVue -> Cập nhật thanh trượt
                 nv.onLocationChange = function (data) {
                     if (data && data.fracPos) {
-                        let zFrac = data.fracPos[2]; // Lấy tọa độ Z
+                        let zFrac = data.fracPos[2]; // Lấy phần phân số của trục Z (Axial)
                         slider.value = zFrac;
                         sliderValue.textContent = zFrac.toFixed(2);
                     }
