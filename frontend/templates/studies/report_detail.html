@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Diagnostic Report - {{ study.patient_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/@niivue/niivue@0.68.2/dist/niivue.umd.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap"
@@ -113,6 +115,30 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #2d4a6f;
         }
+
+        /* Ẩn outline của canvas NiiVue và TÙY CHỈNH RANGE SLIDER */
+        canvas:focus {
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #10b981;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #1a365d;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans text-gray-200 antialiased">
@@ -187,11 +213,11 @@
                     <div>
                         <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Modality</p>
                         <div class="flex items-center gap-2">
-                <span class="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path
-                          stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M3 4a1 1 0 011-1 1h16a1 1 0 011 1 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM7 10h10M7 14h10"/></svg>
-                </span>
+                            <span class="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center">
+                              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path
+                                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M3 4a1 1 0 011-1 1h16a1 1 0 011 1 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM7 10h10M7 14h10"/></svg>
+                            </span>
                             <span class="text-white font-medium">{{ study.modality|default:"Unknown" }}</span>
                         </div>
                     </div>
@@ -210,91 +236,151 @@
             </div>
 
             <div class="glass-dark rounded-xl p-4">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-white font-semibold">Image Analysis</h2>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-400">View Mode:</span>
-                        <div class="flex bg-navy-800 rounded-lg p-0.5">
-                            <button class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">
-                                Side by Side
+
+                {% if study.modality|lower == 'mri' %}
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-white font-semibold">3D MRI Semantic Segmentation</h2>
+                            <p class="text-[11px] text-gray-400 uppercase tracking-wider mt-1">Interactive Viewer
+                                (Scroll or use slider to Pan, Drag to Rotate in 3D)</p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button id="btn-multiplanar"
+                                    class="px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50">
+                                3-Plane View
                             </button>
-                            <button class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">
-                                Overlay
+                            <button id="btn-3drender"
+                                    class="px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all">
+                                3D Render
                             </button>
                         </div>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-gray-400 font-medium">Original Image</span>
+                    <div id="slider-container" class="mb-4 hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="slice-slider"
+                                   class="text-xs text-gray-400 font-medium uppercase tracking-wider">Axial Slice
+                                Navigation</label>
+                            <span id="slice-value" class="text-xs font-mono text-emerald-400">0.50</span>
                         </div>
-                        <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
-                            {% if study.image %}
-                                <img src="{{ study.image.url }}" alt="Original Study Image"
-                                     class="w-full h-full object-contain"/>
-                            {% else %}
-                                <div class="flex h-full items-center justify-center text-gray-500">No Image Available
+                        <input type="range" id="slice-slider" min="0" max="1" step="0.01" value="0.5"
+                               class="w-full appearance-none bg-transparent">
+                    </div>
+
+                    <div class="image-viewer rounded-xl overflow-hidden relative w-full h-[550px] border border-white/5"
+                         style="position: relative;">
+                        <canvas id="mri-canvas" class="w-full h-full" style="outline: none;"></canvas>
+                    </div>
+
+                    {% if prediction %}
+                        <div class="mt-4 flex items-center justify-between bg-navy-900/50 p-3 rounded-lg border border-white/5">
+                            <div class="flex gap-4">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-3 h-3 rounded-sm" style="background-color: #fca5a5;"></span>
+                                    <span class="text-gray-300">Necrotic Core (NCR)</span>
                                 </div>
-                            {% endif %}
-                            <div class="absolute inset-0 opacity-10 pointer-events-none"
-                                 style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-3 h-3 rounded-sm" style="background-color: #93c5fd;"></span>
+                                    <span class="text-gray-300">Edema (ED)</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-3 h-3 rounded-sm" style="background-color: #86efac;"></span>
+                                    <span class="text-gray-300">Enhancing Tumor (ET)</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                {% else %}
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-white font-semibold">Image Analysis</h2>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-400">View Mode:</span>
+                            <div class="flex bg-navy-800 rounded-lg p-0.5">
+                                <button class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">
+                                    Side by Side
+                                </button>
+                                <button class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">
+                                    Overlay
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-gray-400 font-medium">AI Attention Map (xAI)</span>
-                            <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                                <input type="checkbox" id="toggleHeatmap" checked
-                                       class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500">
-                                Show Overlay
-                            </label>
-                        </div>
-
-                        <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
-                            {% if study.image %}
-                                <img src="{{ study.image.url }}" alt="Original Study Image"
-                                     class="w-full h-full object-contain"/>
-                            {% endif %}
-
-                            <div id="heatmapOverlay" class="absolute inset-0 z-10 transition-opacity duration-300">
-                                {% if prediction and prediction.heatmaps %}
-                                    <img id="currentHeatmap" src="" alt="Heatmap"
-                                         class="w-full h-full object-contain heatmap-overlay opacity-80"/>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-400 font-medium">Original Image</span>
+                            </div>
+                            <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
+                                {% if study.image %}
+                                    <img src="{{ study.image.url }}" alt="Original Study Image"
+                                         class="w-full h-full object-contain"/>
                                 {% else %}
-                                    <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs bg-navy-900">
-                                        No Heatmap Available
+                                    <div class="flex h-full items-center justify-center text-gray-500">No Image
+                                        Available
                                     </div>
                                 {% endif %}
-                            </div>
-
-                            <div class="absolute bottom-3 right-3 bg-black/70 rounded-lg p-2 z-20">
-                                <p class="text-[10px] text-gray-400 mb-1.5 text-center">Attention Intensity</p>
-                                <div class="w-24 h-2 rounded-full"
-                                     style="background: linear-gradient(90deg, #3b82f6 0%, #22c55e 25%, #eab308 50%, #f97316 75%, #ef4444 100%);"></div>
-                                <div class="flex justify-between text-[9px] text-gray-500 mt-0.5"><span>Low</span><span>High</span>
-                                </div>
+                                <div class="absolute inset-0 opacity-10 pointer-events-none"
+                                     style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
                             </div>
                         </div>
 
-                        {% if prediction and prediction.heatmaps %}
-                            <div class="mt-3">
-                                <p class="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Detected Findings
-                                    (Click to view region)</p>
-                                <div class="flex flex-wrap gap-2" id="disease-toggles">
-                                    {% for disease, url in prediction.heatmaps.items %}
-                                        <button onclick="changeHeatmap('{{ url }}', this)"
-                                                class="heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700">
-                                            {{ disease }}
-                                        </button>
-                                    {% endfor %}
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-400 font-medium">AI Attention Map (xAI)</span>
+                                <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                                    <input type="checkbox" id="toggleHeatmap" checked
+                                           class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500">
+                                    Show Overlay
+                                </label>
+                            </div>
+
+                            <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
+                                {% if study.image %}
+                                    <img src="{{ study.image.url }}" alt="Original Study Image"
+                                         class="w-full h-full object-contain"/>
+                                {% endif %}
+
+                                <div id="heatmapOverlay" class="absolute inset-0 z-10 transition-opacity duration-300">
+                                    {% if prediction and prediction.heatmaps %}
+                                        <img id="currentHeatmap" src="" alt="Heatmap"
+                                             class="w-full h-full object-contain heatmap-overlay opacity-80"/>
+                                    {% else %}
+                                        <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs bg-navy-900">
+                                            No Heatmap Available
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="absolute bottom-3 right-3 bg-black/70 rounded-lg p-2 z-20">
+                                    <p class="text-[10px] text-gray-400 mb-1.5 text-center">Attention Intensity</p>
+                                    <div class="w-24 h-2 rounded-full"
+                                         style="background: linear-gradient(90deg, #3b82f6 0%, #22c55e 25%, #eab308 50%, #f97316 75%, #ef4444 100%);"></div>
+                                    <div class="flex justify-between text-[9px] text-gray-500 mt-0.5">
+                                        <span>Low</span><span>High</span>
+                                    </div>
                                 </div>
                             </div>
-                        {% endif %}
+
+                            {% if prediction and prediction.heatmaps %}
+                                <div class="mt-3">
+                                    <p class="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Detected Findings
+                                        (Click to view region)</p>
+                                    <div class="flex flex-wrap gap-2" id="disease-toggles">
+                                        {% for disease, url in prediction.heatmaps.items %}
+                                            <button onclick="changeHeatmap('{{ url }}', this)"
+                                                    class="heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700">
+                                                {{ disease }}
+                                            </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -371,7 +457,8 @@
                         </h3>
                         <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4">
                             <p class="text-gray-300 leading-relaxed font-serif text-[15px]">
-                                The radiograph demonstrates patterns consistent with the detected <strong>
+                                The {% if study.modality|lower == 'mri' %}MRI scan{% else %}radiograph{% endif %}
+                                demonstrates patterns consistent with the detected <strong>
                                 {{ prediction.prediction_label|default:"condition" }}</strong>. The highlighted regions
                                 in the attention map indicate the primary areas of concern identified by the neural
                                 network.
@@ -481,41 +568,9 @@
 </main>
 
 <script>
-    // Toggle heatmap overlay
-    document.getElementById('toggleHeatmap').addEventListener('change', function () {
-        const overlay = document.getElementById('heatmapOverlay');
-        if (overlay) {
-            overlay.style.opacity = this.checked ? '1' : '0';
-        }
-    });
-
-    // Hàm chuyển đổi Heatmap khi bấm nút
-    function changeHeatmap(url, btnElement) {
-        // 1. Đổi đường dẫn ảnh
-        const heatmapImg = document.getElementById('currentHeatmap');
-        if(heatmapImg) heatmapImg.src = url;
-
-        // 2. Tắt màu (Reset) tất cả các nút
-        const allBtns = document.querySelectorAll('.heatmap-toggle-btn');
-        allBtns.forEach(btn => {
-            btn.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700";
-        });
-
-        // 3. Bật màu (Active) cho nút vừa được click
-        if(btnElement) {
-            btnElement.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/50";
-        }
-    }
-
-    // Tự động load heatmap đầu tiên khi trang vừa mở
-    document.addEventListener("DOMContentLoaded", () => {
-        const toggles = document.querySelectorAll('.heatmap-toggle-btn');
-        if (toggles.length > 0) {
-            // Click ảo vào nút đầu tiên
-            toggles[0].click();
-        }
-    });
-    // Approval Functions
+    // ==========================================
+    // LOGIC CHUNG
+    // ==========================================
     function approveReport() {
         document.getElementById('validationPending').classList.add('hidden');
         document.getElementById('validationComplete').classList.remove('hidden');
@@ -536,6 +591,151 @@
     function rejectReport() {
         alert('Report rejected. Sent back for manual review.');
     }
+
+    // ==========================================
+    // LOGIC DÀNH RIÊNG CHO X-RAY
+    // ==========================================
+    {% if study.modality|lower != 'mri' %}
+        const toggleHeatmapBtn = document.getElementById('toggleHeatmap');
+        if (toggleHeatmapBtn) {
+            toggleHeatmapBtn.addEventListener('change', function () {
+                const overlay = document.getElementById('heatmapOverlay');
+                if (overlay) {
+                    overlay.style.opacity = this.checked ? '1' : '0';
+                }
+            });
+        }
+
+        function changeHeatmap(url, btnElement) {
+            const heatmapImg = document.getElementById('currentHeatmap');
+            if (heatmapImg) heatmapImg.src = url;
+
+            const allBtns = document.querySelectorAll('.heatmap-toggle-btn');
+            allBtns.forEach(btn => {
+                btn.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700";
+            });
+
+            if (btnElement) {
+                btnElement.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/50";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const toggles = document.querySelectorAll('.heatmap-toggle-btn');
+            if (toggles.length > 0) {
+                toggles[0].click();
+            }
+        });
+    {% endif %}
+
+    // ==========================================
+    // LOGIC DÀNH RIÊNG CHO MRI (NIIVUE) VÀ THANH TRƯỢT
+    // ==========================================
+    {% if study.modality|lower == 'mri' %}
+        document.addEventListener("DOMContentLoaded", () => {
+            console.log("Đang khởi tạo NiiVue 3D Viewer...");
+
+            // Khởi tạo thư viện NiiVue
+            const nv = new niivue.Niivue({
+                show3Dcrosshair: true,
+                backColor: [0.05, 0.1, 0.2, 1],
+                textHeight: 0.04,
+                crosshairColor: [0.1, 0.7, 0.5, 1]
+            });
+
+            nv.attachTo('mri-canvas');
+
+            const sliderContainer = document.getElementById('slider-container');
+            const slider = document.getElementById('slice-slider');
+            const sliderValue = document.getElementById('slice-value');
+
+            var volumeList = [];
+
+            {% if prediction and prediction.heatmaps %}
+                {% if prediction.heatmaps.background_url %}
+                volumeList.push({
+                    url: "{{ prediction.heatmaps.background_url }}",
+                    colormap: "gray",
+                    opacity: 1
+                });
+                {% endif %}
+
+                {% if prediction.heatmaps.mask_url %}
+                volumeList.push({
+                    url: "{{ prediction.heatmaps.mask_url }}",
+                    colormap: "redyell",
+                    opacity: 0.6
+                });
+                {% endif %}
+            {% endif %}
+
+            // Load Volume vào NiiVue
+            if (volumeList.length > 0) {
+                nv.loadVolumes(volumeList).then(() => {
+                    console.log("Tải thành công các lớp cắt MRI!");
+
+                    // Lệnh này ép NiiVue chia màn hình làm 3 (Axial, Coronal, Sagittal)
+                    nv.setSliceType(nv.sliceTypeMultiplanar);
+
+                    // Hiển thị thanh trượt khi load xong
+                    if(sliderContainer) {
+                        sliderContainer.style.display = 'block';
+                    }
+                }).catch(err => {
+                    console.error("Lỗi khi tải Volume NiiVue:", err);
+                    alert("Gặp sự cố khi nạp ảnh MRI. Vui lòng nhấn F12 mở Console để xem lỗi.");
+                });
+            }
+
+            // --- XỬ LÝ 2 NÚT BẤM (3-Plane và 3D Render) ---
+            const btnMultiplanar = document.getElementById('btn-multiplanar');
+            const btn3DRender = document.getElementById('btn-3drender');
+
+            btnMultiplanar.addEventListener('click', (e) => {
+                nv.setSliceType(nv.sliceTypeMultiplanar); // Đổi về 3 mặt cắt
+
+                // Đổi màu nút
+                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
+                btn3DRender.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
+
+                if(sliderContainer) sliderContainer.style.display = 'block';
+            });
+
+            btn3DRender.addEventListener('click', (e) => {
+                nv.setSliceType(nv.sliceTypeRender); // Đổi về Render Thể tích 3D
+
+                // Đổi màu nút
+                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
+                btnMultiplanar.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
+
+                if(sliderContainer) sliderContainer.style.display = 'none';
+            });
+
+            // --- XỬ LÝ THANH TRƯỢT (SLIDER) ---
+            if(slider) {
+                // Kéo thanh trượt -> đổi lát cắt
+                slider.addEventListener('input', (e) => {
+                    let frac = parseFloat(e.target.value);
+                    sliderValue.textContent = frac.toFixed(2);
+
+                    // Cập nhật vị trí Z (0 đến 1)
+                    if (nv.scene && nv.scene.crosshairPos) {
+                        let currentPos = nv.scene.crosshairPos;
+                        nv.setCrosshair([currentPos[0], currentPos[1], frac]);
+                    }
+                });
+
+                // Cuộn chuột trên ảnh -> thanh trượt chạy theo
+                nv.onLocationChange = function (data) {
+                    if (data && data.fracPos) {
+                        let zFrac = data.fracPos[2]; // Lấy tọa độ Z
+                        slider.value = zFrac;
+                        sliderValue.textContent = zFrac.toFixed(2);
+                    }
+                };
+            }
+        });
+    {% endif %}
 </script>
 </body>
 </html>

@@ -22,4 +22,5 @@ uploads/
 # Biến môi trường
 .env
 
-.pth
+# Trọng số mô hình
+ai_engine/xray/weights/

@@ -1,10 +1,9 @@
-from django.http import JsonResponse
-from django.shortcuts import render, HttpResponse, get_object_or_404
+from django.shortcuts import render, HttpResponse
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Study, Prediction
 from .serializers import StudySerializer
-from .tasks import process_xray_study
+from .tasks import process_xray_study, process_mri_study
 import uuid
 from django.views.generic import TemplateView, ListView, DetailView
 from rest_framework.views import APIView
@@ -16,41 +15,37 @@ from .utils import render_to_pdf
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
-from celery.result import AsyncResult
 
 
 class StudyUploadView(generics.CreateAPIView):
-    """
-    Endpoint to upload a new study (image + metadata).
-    Handles missing `patient_name` by generating an anonymous identifier.
-    """
+    """Endpoint to upload a new study (image + metadata)."""
     queryset = Study.objects.all()
     serializer_class = StudySerializer
+    permission_classes = [IsAuthenticated]  # Thêm bảo mật
 
     def post(self, request, *args, **kwargs):
-        # 1. Mở khóa QueryDict để có thể chỉnh sửa dữ liệu mà không cần copy file
         if hasattr(request.data, '_mutable'):
             request.data._mutable = True
 
-        # 2. Thêm tên ẩn danh nếu user không nhập
         if not request.data.get('patient_name'):
-            anon_name = f"Anonymous_Patient_{uuid.uuid4().hex[:6]}"
-            request.data['patient_name'] = anon_name
+            request.data['patient_name'] = f"Anonymous_Patient_{uuid.uuid4().hex[:6]}"
 
-        # 3. Khóa QueryDict lại cho an toàn
         if hasattr(request.data, '_mutable'):
             request.data._mutable = False
 
-        # 4. Đưa dữ liệu vào serializer như bình thường
         serializer = self.get_serializer(data=request.data)
 
         if serializer.is_valid():
             study = serializer.save()
-            # Kích hoạt Celery task để AI xử lý
-            process_xray_study.delay(study.id, study.image.path)
+
+            # ĐIỀU HƯỚNG TASK DỰA VÀO MODALITY
+            modality = study.modality.lower() if study.modality else ''
+            if 'mri' in modality:
+                process_mri_study.delay(study.id, study.image.path)
+            else:
+                process_xray_study.delay(study.id, study.image.path)
             return Response({'study_id': study.id, 'status': 'Processing'}, status=status.HTTP_201_CREATED)
 
-        print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -70,9 +65,6 @@ def MriAlzheimerView(request):
     return HttpResponse("MRI Alzheimer Module coming soon")
 
 class StudyListView(LoginRequiredMixin, ListView):
-    """
-    Displays a list of all studies, ordered by newest first.
-    """
     model = Study
     template_name = "studies/study_list.html"
     context_object_name = "studies"
@@ -84,9 +76,6 @@ class StudyListView(LoginRequiredMixin, ListView):
         return Study.objects.all().order_by("-id")
 
 class ReportDetailView(LoginRequiredMixin, DetailView):
-    """
-    Shows the AI diagnostic report for a specific study.
-    """
     model = Study
     template_name = "studies/report_detail.html"
     context_object_name = "study"
@@ -95,18 +84,13 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
-            prediction = Prediction.objects.get(study=self.object)
-            context["prediction"] = prediction
+            context["prediction"] = Prediction.objects.get(study=self.object)
         except Prediction.DoesNotExist:
             context["prediction"] = None
         return context
 
 
-# ---> TÍNH NĂNG MỚI ĐƯỢC CHÈN VÀO ĐÂY <---
 class DownloadReportPDFView(LoginRequiredMixin, DetailView):
-    """
-    Generates and downloads a PDF version of the AI diagnostic report.
-    """
     model = Study
     template_name = "studies/report_pdf.html"
     pk_url_kwarg = "pk"
@@ -118,28 +102,14 @@ class DownloadReportPDFView(LoginRequiredMixin, DetailView):
         except Prediction.DoesNotExist:
             prediction = None
 
-        context = {
-            "study": self.object,
-            "prediction": prediction,
-        }
-
-        pdf_response = render_to_pdf(self.template_name, context)
+        pdf_response = render_to_pdf(self.template_name, {"study": self.object, "prediction": prediction})
         return pdf_response
 
 
-# ----------------------------------------
-
 class AnalyticsView(LoginRequiredMixin, TemplateView):
-    """
-    Serves the analytics dashboard page (`analytics.html`).
-    """
     template_name = "studies/analytics.html"
 
-
 class AnalyticsDataView(APIView):
-    """
-    API endpoint trả về dữ liệu tổng hợp.
-    """
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         total_studies = Study.objects.count()
@@ -155,11 +125,9 @@ class AnalyticsDataView(APIView):
             .order_by('date')
         )
 
-        data = {
+        return Response({
             'total_studies': total_studies,
             'modality_distribution': list(modality_counts),
             'status_distribution': list(status_counts),
             'trend_data': list(trend_data)
-        }
-
-        return Response(data)
+        })
