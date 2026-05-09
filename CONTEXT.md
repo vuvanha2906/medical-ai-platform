@@ -1,26 +1,24 @@
-# Project Context: Medical AI Platform
+# Medical AI Diagnostic Platform - Context
 
-## Tech Stack & Environment
-* **Backend:** Django 4.2, Django REST Framework (DRF).
-* **Task Queue:** Celery (Synchronous mode for local dev) + SQLite.
-* **AI Engine:** PyTorch (DenseNet121) + pytorch-grad-cam.
-* **PDF Generation:** `xhtml2pdf` for clinical report exports.
-* **Frontend:** Django Templates + Tailwind CSS (No React). Vanilla JS Fetch API. UI features a Dark Theme with Glassmorphism aesthetic. Chart.js for Analytics.
+## 1. Project Objective
+To build an AI-based medical diagnostic platform (xAI) focusing on explainability. The system supports multimodality, including chest X-rays and brain MRI.
 
-## Current Implementation Overview
+## 2. System Architecture
+- **Backend:** Django Framework, REST API.
 
-### 1. Active Django Apps & Models
-* **`studies` App:** `Study` (Integer ID, patient info, modality, status) and `Prediction` (FK to Study, label, probability, heatmap_url, and a new `heatmaps` JSONField to store multiple multi-disease attention maps).
-* **`users` App:** Custom `CustomUser` model handling system authentication.
+- **Task Queue:** Celery + Redis (Asynchronous processing of heavy AI tasks).
 
-### 2. End-to-End Architecture & Security
-1. **Authentication:** Integrated Django Auth. Custom Glassmorphism login page (`users/login.html`). All main views and APIs are secured using `LoginRequiredMixin` and `@login_required` / `IsAuthenticated`.
-2. **Image Upload & Processing:** Authenticated user uploads via UI -> `StudyUploadView` creates record -> Celery task `process_xray_study` runs multi-label PyTorch inference -> Thresholds > 0.5 trigger multi-class Grad-CAM heatmaps -> Saves dynamic dictionary to DB.
-3. **UI/UX Flow:**
-  * `Dashboard` & `Studies`: Secured history and upload gateways.
-  * `Report Detail`: Visual xAI comparison with interactive JS toggles for multi-disease heatmaps, plus PDF Export functionality.
-  * `Analytics`: Chart.js dashboards rendering metrics from secured APIs.
+- **AI Engine:** PyTorch, MONAI (For 3D medical data).
 
-## Immediate Next Steps
-* Integrate the VinBigData Chest X-ray dataset to upgrade the system from Classification to an Object Detection / Hybrid xAI paradigm.
-* Optimize local inference performance (batching and mixed precision) on the RTX 5060 GPU environment.
+- **Frontend:** Tailwind CSS (Glassmorphism aesthetic), NiiVue (3D Medical Visualizer).
+
+## 3. Development History & Current Status
+- **Phase 1 (X-ray):** Completed classification of 14 lung diseases (NIH dataset). Multi-layer Grad-CAM integration allows physicians to view specific lesion areas for each disease.
+
+- **Phase 2 (MRI):** Complete the 3D data processing pipeline. Build an automated DICOM to NIfTI converter.
+
+- **Status:** The entire data flow from upload -> preprocessing -> AI simulation -> 3D rendering is now smooth. The system is ready for loading actual weights from the SwinUNETR model.
+
+## 4. Training Configuration (Hardware)
+- CPU: Ryzen 5 5600X
+- GPU: NVIDIA RTX 5060 8GB VRAM (Patch-based training optimized 96x96x96).

@@ -1,18 +1,41 @@
-## ✅ Milestones Achieved
+# Project Progress Report - Milestone: Multi-modality Integration
 
-- **Project Scaffolding:** Solid decoupled architecture (`backend/`, `frontend/`, `ai_engine/`).
-- **Database Modeling:** `Study` and `Prediction` models successfully linked, recently upgraded to support JSON-based multi-heatmap storage.
-- **Security & Access Control:** Implemented Django Authentication with a custom UI. Secured all critical endpoints and views against unauthorized access.
-- **Premium UI/UX:** Dark Theme Glassmorphism for Dashboard, History, Report Detail, and Analytics. Built dynamic JS toggles for multi-disease xAI visualization.
-- **Export Capabilities:** Automated PDF generation for AI diagnosis results (`xhtml2pdf`).
-- **Core AI Engine & Pre-training:** Successfully built custom PyTorch `Dataset` and `DataLoader` classes. Wrote a full training loop and trained a DenseNet121 model from scratch on the NIH Chest X-ray 14 dataset via Kaggle, achieving stable convergence.
-- **Multi-disease xAI Pipeline:** Transitioned from single-class Softmax to a Multi-label Sigmoid + Thresholding approach. The system now generates, saves, and displays distinct Grad-CAM heatmaps for every specific abnormality detected in a single scan.
+## 1. Completed Tasks
 
-## 🚀 Strategic Roadmap & Next Steps
+### A. Web & UI/UX Infrastructure
+- Designed a Dark Theme interface with Glassmorphism style.
 
-### Phase 3: High-Precision Localization & Transfer Learning (Current Focus)
+- Built an automated PDF generation system for diagnostic reports.
 
-- Pivot the pre-trained NIH DenseNet121 weights toward the VinBigData Chest X-ray dataset.
-- Transition the xAI paradigm from weakly-supervised Grad-CAM to robust Object Detection (e.g., YOLOv8/v10 or Faster R-CNN) or a Hybrid Multi-task model, leveraging the VinBigData bounding box annotations.
-- Optimize the end-to-end data ingestion pipeline (handling large DICOM/PNG transformations) utilizing local hardware capabilities.
-- Integrate the newly fine-tuned localization model into the existing Django Celery inference wrapper, drawing actual bounding boxes alongside or instead of heatmaps for superior clinical explainability.
+- Completed the dashboard for managing case lists and AI processing status.
+
+### B. X-ray Module (Chest)
+- **Model:** DenseNet121 (Fine-tuned on NIH Chest X-ray 14).
+
+- **xAI Features:** Successfully implemented Grad-CAM Heatmap. Supports displaying multiple heatmaps on the same image via a toggle switch.
+
+- **Input:** Automatically converted DICOM to PNG for optimized web display.
+
+### C. MRI Module (Brain Tumor)
+- **Model:** SwinUNETR (Hybrid Transformer architecture for 3D Segmentation).
+
+- **Training Results:** Achieved a Dice Score of 0.7559 on the BraTS 2020 set after 10 Epochs on Kaggle.
+
+- **Data Processing:** Successfully converted DICOM ZIP data to NIfTI 3D.
+
+- **Display:** Integrated NiiVue for multiplanar viewing and 3D rendering.
+
+## 2. Key Deliverables
+
+- X-ray diagnostic pipeline operates 100% with true weights.
+
+- 3D MRI viewing system operates smoothly, automatically adapting to the orientation of uploaded files.
+
+- All backend (Tasks, Views) and frontend (JavaScript, NiiVue) code has been cleaned up and optimized.
+
+## 3. Next Steps
+- Replace the fake mask logic in `tasks.py` with the `MRITumorPredictor` class.
+
+- Load the weight file `best_swinunetr_brats.pth` and test the accuracy in the local environment.
+
+- Adjust the threshold to optimize the tumor segmentation area.
