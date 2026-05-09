@@ -1,6 +1,8 @@
 import os
 import zipfile
 import shutil
+
+import dicom2nifti
 import nibabel as nib
 import time
 from pathlib import Path
@@ -122,52 +124,117 @@ def process_xray_study(study_id, image_path):
 
 
 # =================================================================
+# HELPER MỚI: PHÁT HIỆN MẶT PHẲNG CHỤP TỪ METADATA DICOM
+# =================================================================
+def get_dicom_plane(image_orientation):
+    """
+    Sử dụng vector chỉ phương của ảnh DICOM để xác định mặt phẳng:
+    Sagittal, Coronal, hoặc Axial.
+    """
+    row_cosine = np.array(image_orientation[:3])
+    col_cosine = np.array(image_orientation[3:])
+
+    # Tính tích có hướng (Cross product) để tìm Vector pháp tuyến
+    normal_vector = np.cross(row_cosine, col_cosine)
+    abs_normal = np.abs(normal_vector)
+
+    # Trục nào có giá trị lớn nhất thì mặt phẳng vuông góc với trục đó
+    dominant_axis = np.argmax(abs_normal)
+
+    if dominant_axis == 0:
+        return 'Sagittal'
+    elif dominant_axis == 1:
+        return 'Coronal'
+    else:
+        return 'Axial'
+
+# =================================================================
 # HELPER: CHUYỂN ĐỔI BẤT KỲ ĐỊNH DẠNG NÀO SANG NIFTI (.nii.gz)
 # =================================================================
 def ensure_nifti_format(file_path, output_dir):
     """
-    Nhận vào .dcm, .nii.gz hoặc .zip.
-    Đảm bảo trả về đúng 1 file .nii.gz hợp lệ để làm nền hiển thị.
+    Trả về: (nifti_file_path, has_3_planes_flag)
     """
     ext = file_path.lower()
 
-    # TRƯỜNG HỢP 1: Đã là NIfTI
+    # TRƯỜNG HỢP 1: Đã là NIfTI (BraTS) -> Mặc định là 3D chuẩn
     if ext.endswith('.nii') or ext.endswith('.nii.gz'):
-        return file_path
+        return file_path, True
 
-    # TRƯỜNG HỢP 2: Là DICOM đơn lẻ
+    # TRƯỜNG HỢP 2: Là 1 file DICOM đơn lẻ -> Chắc chắn là 2D
     elif ext.endswith('.dcm') or ext.endswith('.dicom'):
         dicom_data = pydicom.dcmread(file_path)
         pixel_array = dicom_data.pixel_array.astype(np.float32)
 
-        # Thêm chiều Z để biến ảnh 2D thành khối 3D (H, W, 1)
+        # SỬA LỖI LẬT ẢNH: Xoay ma trận từ (Y, X) sang (X, Y)
+        pixel_array = np.transpose(pixel_array)
+
         if len(pixel_array.shape) == 2:
             pixel_array = np.expand_dims(pixel_array, axis=-1)
 
-        # Lưu thành file NIfTI
         nii_img = nib.Nifti1Image(pixel_array, affine=np.eye(4))
-        nii_path = os.path.join(output_dir, 'converted_dicom.nii.gz')
+        nii_path = os.path.join(output_dir, 'converted_single_dicom.nii.gz')
         nib.save(nii_img, nii_path)
-        return nii_path
+        return nii_path, False
 
-    # TRƯỜNG HỢP 3: Là file ZIP
+    # TRƯỜNG HỢP 3: Là file ZIP chứa chuỗi DICOM
     elif ext.endswith('.zip'):
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
-            zip_ref.extractall(output_dir)
+        extract_dir = os.path.join(output_dir, 'extracted_dicom')
+        os.makedirs(extract_dir, exist_ok=True)
 
-        # Tìm file .nii.gz hoặc .dcm đầu tiên thấy được trong thư mục giải nén
-        for root, _, files in os.walk(output_dir):
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+
+        # A. Quét Metadata DICOM để tìm các mặt phẳng
+        detected_planes = set()
+        has_nifti = False
+        nifti_path = None
+
+        for root, _, files in os.walk(extract_dir):
             for file in files:
                 f_path = os.path.join(root, file)
                 if file.lower().endswith(('.nii', '.nii.gz')):
-                    return f_path
-                elif file.lower().endswith('.dcm'):
-                    return ensure_nifti_format(f_path, output_dir)  # Đệ quy để convert DICOM
+                    has_nifti = True
+                    nifti_path = f_path
+                else:
+                    # Thử đọc Header DICOM (Rất nhanh vì không đọc pixel)
+                    try:
+                        dcm = pydicom.dcmread(f_path, stop_before_pixels=True)
+                        if 'ImageOrientationPatient' in dcm:
+                            plane = get_dicom_plane(dcm.ImageOrientationPatient)
+                            detected_planes.add(plane)
+                    except:
+                        continue
 
-        raise ValueError("Không tìm thấy bất kỳ file ảnh y tế nào (.nii, .dcm) trong file ZIP.")
+        # Nếu trong ZIP chứa NIfTI (như BraTS), bỏ qua DICOM, xem như 3D
+        if has_nifti:
+            return nifti_path, True
 
+        # KIỂM TRA ĐIỀU KIỆN 3 MẶT PHẲNG CỦA BẠN:
+        has_3_planes = (len(detected_planes) == 3)
+        print(f"Các mặt phẳng quét được trong DICOM: {detected_planes} -> Đủ 3 mặt: {has_3_planes}")
+
+        # B. Dùng dicom2nifti chuyển chuỗi DICOM thành 1 khối NIfTI (.nii.gz)
+        nifti_out_dir = os.path.join(output_dir, 'nifti_converted')
+        os.makedirs(nifti_out_dir, exist_ok=True)
+
+        try:
+            dicom2nifti.convert_directory(extract_dir, nifti_out_dir, compression=True, reorient=True)
+            generated_files = [f for f in os.listdir(nifti_out_dir) if f.endswith('.nii.gz')]
+            if generated_files:
+                return os.path.join(nifti_out_dir, generated_files[0]), has_3_planes
+        except Exception as e:
+            print(f"Cảnh báo gom DICOM: {e}")
+            # Fallback
+            for root, _, files in os.walk(extract_dir):
+                for file in files:
+                    if file.lower().endswith(('.dcm', '.dicom')):
+                        fallback_path, _ = ensure_nifti_format(os.path.join(root, file), output_dir)
+                        return fallback_path, False
+
+        raise ValueError("Không tìm thấy dữ liệu hợp lệ trong file ZIP.")
     else:
-        raise ValueError("Định dạng file không được hỗ trợ. Vui lòng tải lên .nii.gz, .dcm hoặc .zip")
+        raise ValueError("Định dạng file không được hỗ trợ.")
 
 # backend/apps/ai_engine/tasks.py (Phác thảo logic)
 
@@ -178,31 +245,25 @@ def process_mri_study(study_id, uploaded_file_path):
         study.status = 'Processing'
         study.save()
 
-        # Thư mục tạm thời
         work_dir = os.path.join(settings.MEDIA_ROOT, 'temp', f'study_{study_id}')
         os.makedirs(work_dir, exist_ok=True)
 
-        # 1. Đảm bảo có file NIfTI gốc để hiển thị
-        print(f"Đang xử lý file MRI: {uploaded_file_path}")
-        nifti_file = ensure_nifti_format(uploaded_file_path, work_dir)
+        print(f"Đang xử lý MRI: {uploaded_file_path}")
+        # NHẬN BIẾN has_3_planes TỪ HELPER
+        nifti_file, has_3_planes = ensure_nifti_format(uploaded_file_path, work_dir)
 
-        # 2. CHẠY AI SUY LUẬN (Tích hợp mô hình SwinUNETR vào đây)
-        # TẠM THỜI GIẢ LẬP ĐỂ TEST LUỒNG
+        # GIẢ LẬP SUY LUẬN AI (Giữ nguyên)
         time.sleep(2)
-
-        # Lấy kích thước thật của ảnh vừa nạp
         img_nii = nib.load(nifti_file)
         img_data = img_nii.get_fdata()
         affine = img_nii.affine
 
-        # Tạo khối u giả lập ở chính giữa bức ảnh
         fake_mask = np.zeros(img_data.shape, dtype=np.uint8)
         cx, cy, cz = img_data.shape[0] // 2, img_data.shape[1] // 2, img_data.shape[2] // 2
-        fake_mask[cx - 20:cx + 20, cy - 20:cy + 20, cz - 5:cz + 5] = 2  # Tạo cục u nhỏ ở giữa
+        fake_mask[cx - 20:cx + 20, cy - 20:cy + 20, cz - 5:cz + 5] = 2
 
         mask_nii = nib.Nifti1Image(fake_mask, affine)
 
-        # 3. Chuẩn bị đường dẫn lưu file vào thư mục public media
         bg_filename = f"mri_bg_study_{study_id}.nii.gz"
         mask_filename = f"mri_mask_study_{study_id}.nii.gz"
 
@@ -213,29 +274,25 @@ def process_mri_study(study_id, uploaded_file_path):
         mask_full_path = os.path.join(settings.MEDIA_ROOT, mask_rel_path)
 
         os.makedirs(os.path.dirname(bg_full_path), exist_ok=True)
-
-        # Copy file gốc và lưu mask
         shutil.copy(nifti_file, bg_full_path)
         nib.save(mask_nii, mask_full_path)
 
-        # 4. Cập nhật Database
         Prediction.objects.update_or_create(
             study=study,
             defaults={
                 'prediction_label': 'High-grade Glioma',
                 'probability': '94.2%',
                 'heatmaps': {
-                    # SỬA LỖI Ở ĐÂY: Dùng f-string nối chuỗi trực tiếp với dấu "/", không dùng os.path.join
                     'background_url': f"{settings.MEDIA_URL}heatmaps/{bg_filename}",
-                    'mask_url': f"{settings.MEDIA_URL}heatmaps/{mask_filename}"
+                    'mask_url': f"{settings.MEDIA_URL}heatmaps/{mask_filename}",
+                    # CHUYỂN CỜ "FORCE 2D" CHO FRONTEND
+                    'force_2d': not has_3_planes
                 }
             }
         )
 
         study.status = 'Completed'
         study.save()
-
-        # Dọn dẹp thư mục tạm
         shutil.rmtree(work_dir, ignore_errors=True)
         return {'study_id': study_id, 'status': 'Success'}
 
@@ -243,5 +300,4 @@ def process_mri_study(study_id, uploaded_file_path):
         if 'study' in locals():
             study.status = 'Failed'
             study.save()
-        print(f"Lỗi hệ thống MRI: {str(e)}")
         return {'study_id': study_id, 'status': 'Failed', 'error': str(e)}

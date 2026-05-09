@@ -635,19 +635,18 @@
         document.addEventListener("DOMContentLoaded", () => {
             console.log("Đang khởi tạo NiiVue 3D Viewer...");
 
-            // Khởi tạo thư viện NiiVue
             const nv = new niivue.Niivue({
                 show3Dcrosshair: true,
-                backColor: [0.05, 0.1, 0.2, 1], // Màu nền Navy
+                backColor: [0.05, 0.1, 0.2, 1],
                 textHeight: 0.04,
                 crosshairColor: [0.1, 0.7, 0.5, 1],
-                dragAndDropEnabled: false // Tắt kéo thả file ngoài vào canvas
+                dragAndDropEnabled: false
             });
 
             const canvas = document.getElementById('mri-canvas');
             nv.attachTo('mri-canvas');
 
-            // --- QUAN TRỌNG: CHẶN TRÌNH DUYỆT CUỘN TRANG KHI LĂN CHUỘT TRÊN MRI ---
+            // Chặn cuộn trang web khi lăn chuột trên MRI
             canvas.addEventListener('wheel', function(e) {
                 e.preventDefault();
             }, { passive: false });
@@ -680,9 +679,50 @@
             if (volumeList.length > 0) {
                 nv.loadVolumes(volumeList).then(() => {
                     console.log("Tải thành công các lớp cắt MRI!");
-                    nv.setSliceType(nv.sliceTypeMultiplanar);
 
-                    if(sliderContainer) sliderContainer.style.display = 'block';
+                    // LẤY KÍCH THƯỚC ĐẦY ĐỦ CỦA 3 TRỤC (X, Y, Z)
+                    let xDim = nv.volumes[0].hdr.dims[1];
+                    let yDim = nv.volumes[0].hdr.dims[2];
+                    let zDim = nv.volumes[0].hdr.dims[3];
+                    console.log(`Kích thước không gian - X: ${xDim}, Y: ${yDim}, Z: ${zDim}`);
+
+                    const btnMultiplanar = document.getElementById('btn-multiplanar');
+                    const btn3DRender = document.getElementById('btn-3drender');
+
+                    let force2D = false;
+                    {% if prediction and prediction.heatmaps.force_2d %}
+                        force2D = true;
+                    {% endif %}
+
+                    // THUẬT TOÁN XÁC ĐỊNH MẶT PHẲNG 2D
+                    if (xDim < 5 || yDim < 5 || zDim < 5 || force2D) {
+                        let minDim = Math.min(xDim, yDim, zDim);
+
+                        // Tự động xoay camera vuông góc với trục mỏng nhất
+                        if (minDim === xDim) {
+                            nv.setSliceType(nv.sliceTypeSagittal);
+                            console.log("Chế độ 2D: Đã tự động xoay sang góc Sagittal.");
+                        } else if (minDim === yDim) {
+                            nv.setSliceType(nv.sliceTypeCoronal);
+                            console.log("Chế độ 2D: Đã tự động xoay sang góc Coronal.");
+                        } else {
+                            nv.setSliceType(nv.sliceTypeAxial);
+                            console.log("Chế độ 2D: Đã tự động xoay sang góc Axial.");
+                        }
+
+                        // Ẩn công cụ 3D, giữ lại thanh trượt
+                        if(sliderContainer) sliderContainer.style.display = 'block';
+                        if(btnMultiplanar) btnMultiplanar.style.display = 'none';
+                        if(btn3DRender) btn3DRender.style.display = 'none';
+
+                    } else {
+                        // CHẾ ĐỘ 3D HOÀN CHỈNH
+                        nv.setSliceType(nv.sliceTypeMultiplanar);
+                        if(sliderContainer) sliderContainer.style.display = 'block';
+                        if(btnMultiplanar) btnMultiplanar.style.display = 'block';
+                        if(btn3DRender) btn3DRender.style.display = 'block';
+                    }
+
                 }).catch(err => {
                     console.error("Lỗi khi tải Volume NiiVue:", err);
                 });
@@ -706,25 +746,34 @@
                 if(sliderContainer) sliderContainer.style.display = 'none';
             });
 
-            // --- ĐỒNG BỘ THANH TRƯỢT VÀ CUỘN CHUỘT ---
+            // --- ĐỒNG BỘ THANH TRƯỢT THEO MẶT PHẲNG HIỆN TẠI ---
             if(slider) {
-                // 1. Khi User KÉO thanh trượt -> Đổi lát cắt Axial (Trục Z)
                 slider.addEventListener('input', (e) => {
                     let frac = parseFloat(e.target.value);
                     sliderValue.textContent = frac.toFixed(2);
 
                     if (nv.scene && nv.scene.crosshairPos) {
                         let pos = nv.scene.crosshairPos;
-                        nv.setCrosshair([pos[0], pos[1], frac]); // Giữ nguyên X, Y, chỉ đổi Z
+                        // Map thanh trượt vào đúng trục đang hiển thị
+                        if (nv.sliceType === nv.sliceTypeSagittal) {
+                            nv.setCrosshair([frac, pos[1], pos[2]]);
+                        } else if (nv.sliceType === nv.sliceTypeCoronal) {
+                            nv.setCrosshair([pos[0], frac, pos[2]]);
+                        } else {
+                            nv.setCrosshair([pos[0], pos[1], frac]);
+                        }
                     }
                 });
 
-                // 2. Khi User CUỘN CHUỘT hoặc CLICK đổi vị trí trên NiiVue -> Cập nhật thanh trượt
                 nv.onLocationChange = function (data) {
                     if (data && data.fracPos) {
-                        let zFrac = data.fracPos[2]; // Lấy phần phân số của trục Z (Axial)
-                        slider.value = zFrac;
-                        sliderValue.textContent = zFrac.toFixed(2);
+                        // Lấy tọa độ thanh trượt tùy theo góc nhìn
+                        let frac = data.fracPos[2]; // Mặc định Z (Axial)
+                        if (nv.sliceType === nv.sliceTypeSagittal) frac = data.fracPos[0];
+                        else if (nv.sliceType === nv.sliceTypeCoronal) frac = data.fracPos[1];
+
+                        slider.value = frac;
+                        sliderValue.textContent = frac.toFixed(2);
                     }
                 };
             }
