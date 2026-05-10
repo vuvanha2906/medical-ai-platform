@@ -163,16 +163,18 @@
 
                     {% else %}
 
-                        <div class="flex flex-row gap-4 w-full h-[450px]">
-                            <div class="relative w-1/2 h-full bg-[#0a1628] rounded-xl overflow-hidden border border-white/5">
-                                <div class="absolute top-3 left-3 bg-navy-900/80 px-2 py-1 rounded text-[10px] text-gray-300 z-10 pointer-events-none">Original MRI</div>
-                                <canvas id="mri-canvas-orig" style="position: absolute; top:0; left:0; width:100%; height:100%; outline:none;"></canvas>
+                        <div class="relative w-full h-[500px] bg-[#0a1628] rounded-xl overflow-hidden border border-white/5">
+
+                            <div class="absolute top-3 left-3 z-10 flex bg-navy-900/80 rounded-lg p-1 border border-white/10 backdrop-blur">
+                                <button id="btn-view-orig" class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">
+                                    Original MRI
+                                </button>
+                                <button id="btn-view-ai" class="px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-lg transition-all">
+                                    AI Overlay
+                                </button>
                             </div>
 
-                            <div class="relative w-1/2 h-full bg-[#0a1628] rounded-xl overflow-hidden border border-white/5">
-                                <div class="absolute top-3 left-3 bg-emerald-900/80 px-2 py-1 rounded text-[10px] text-emerald-300 z-10 pointer-events-none">AI Segmentation</div>
-                                <canvas id="mri-canvas-mask" style="position: absolute; top:0; left:0; width:100%; height:100%; outline:none;"></canvas>
-                            </div>
+                            <canvas id="mri-canvas" style="display: block; width: 100%; height: 100%; outline: none;"></canvas>
                         </div>
 
                         {% if prediction %}
@@ -408,146 +410,105 @@
     function rejectReport() { alert('Report rejected. Sent back for manual review.'); }
 
     // ==========================================
-    // LOGIC DÀNH RIÊNG CHO X-RAY
-    // ==========================================
-    {% if study.modality|lower != 'mri' %}
-        const toggleHeatmapBtn = document.getElementById('toggleHeatmap');
-        if (toggleHeatmapBtn) {
-            toggleHeatmapBtn.addEventListener('change', function () {
-                const overlay = document.getElementById('heatmapOverlay');
-                if (overlay) { overlay.style.opacity = this.checked ? '1' : '0'; }
-            });
-        }
-
-        function changeHeatmap(url, btnElement) {
-            const heatmapImg = document.getElementById('currentHeatmap');
-            if (heatmapImg) heatmapImg.src = url;
-
-            const allBtns = document.querySelectorAll('.heatmap-toggle-btn');
-            allBtns.forEach(btn => {
-                btn.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700";
-            });
-
-            if (btnElement) {
-                btnElement.className = "heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-emerald-500/20 text-emerald-400 border-emerald-500/50";
-            }
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const toggles = document.querySelectorAll('.heatmap-toggle-btn');
-            if (toggles.length > 0) { toggles[0].click(); }
-        });
-    {% endif %}
-
-    // ==========================================
-    // LOGIC DÀNH RIÊNG CHO MRI (NIIVUE 0.68.2) VÀ THANH TRƯỢT
+    // LOGIC DÀNH RIÊNG CHO MRI (1 MÀN HÌNH - TỐI ƯU HIỆU NĂNG 100%)
     // ==========================================
     {% if study.modality|lower == 'mri' and study.status == 'Completed' %}
         document.addEventListener("DOMContentLoaded", () => {
 
-            const opts = {
+            const nv = new niivue.Niivue({
                 show3Dcrosshair: true,
                 backColor: [0.05, 0.1, 0.2, 1],
-                crosshairColor: [0.1, 0.7, 0.5, 1],
-                dragAndDropEnabled: false
-            };
+                crosshairColor: [0.1, 0.7, 0.5, 1]
+            });
 
-            const nvOrig = new niivue.Niivue(opts);
-            const nvMask = new niivue.Niivue(opts);
+            nv.attachTo('mri-canvas');
 
-            nvOrig.attachTo('mri-canvas-orig');
-            nvMask.attachTo('mri-canvas-mask');
-
-            var volOrig = [];
-            var volMask = [];
+            var volumeList = [];
 
             {% if prediction and prediction.heatmaps %}
+                // Lớp 1: Ảnh MRI gốc
                 {% if prediction.heatmaps.background_url %}
-                    volOrig.push({url: "{{ prediction.heatmaps.background_url }}", colormap: "gray", opacity: 1});
-                    volMask.push({url: "{{ prediction.heatmaps.background_url }}", colormap: "gray", opacity: 1});
+                    volumeList.push({url: "{{ prediction.heatmaps.background_url }}", colormap: "gray", opacity: 1});
                 {% endif %}
-
+                // Lớp 2: Ảnh màu AI (Nằm đè lên trên lớp 1)
                 {% if prediction.heatmaps.mask_url %}
-                    volMask.push({url: "{{ prediction.heatmaps.mask_url }}", colormap: "roi_i256", opacity: 0.6});
+                    volumeList.push({url: "{{ prediction.heatmaps.mask_url }}", colormap: "roi_i256", opacity: 0.6});
                 {% endif %}
             {% endif %}
 
-            if (volOrig.length > 0) {
-                nvOrig.loadVolumes(volOrig).then(() => {
-                    return nvMask.loadVolumes(volMask);
-                }).then(() => {
-
-                    // CỜ ĐỒNG BỘ 1 CHIỀU: An toàn, không gây crash F12
-                    nvOrig.syncWith(nvMask);
-
-                    let xDim = nvMask.volumes[0].hdr.dims[1];
-                    let yDim = nvMask.volumes[0].hdr.dims[2];
-                    let zDim = nvMask.volumes[0].hdr.dims[3];
+            if (volumeList.length > 0) {
+                nv.loadVolumes(volumeList).then(() => {
+                    let xDim = nv.volumes[0].hdr.dims[1];
+                    let yDim = nv.volumes[0].hdr.dims[2];
+                    let zDim = nv.volumes[0].hdr.dims[3];
 
                     let force2D = false;
                     {% if prediction and prediction.heatmaps.force_2d %} force2D = true; {% endif %}
 
                     if (xDim < 5 || yDim < 5 || zDim < 5 || force2D) {
                         let minDim = Math.min(xDim, yDim, zDim);
-                        if (minDim === xDim) { nvOrig.setSliceType(nvOrig.sliceTypeSagittal); nvMask.setSliceType(nvMask.sliceTypeSagittal); }
-                        else if (minDim === yDim) { nvOrig.setSliceType(nvOrig.sliceTypeCoronal); nvMask.setSliceType(nvMask.sliceTypeCoronal); }
-                        else { nvOrig.setSliceType(nvOrig.sliceTypeAxial); nvMask.setSliceType(nvMask.sliceTypeAxial); }
+                        if (minDim === xDim) nv.setSliceType(nv.sliceTypeSagittal);
+                        else if (minDim === yDim) nv.setSliceType(nv.sliceTypeCoronal);
+                        else nv.setSliceType(nv.sliceTypeAxial);
                     } else {
-                        nvOrig.setSliceType(nvOrig.sliceTypeMultiplanar);
-                        nvMask.setSliceType(nvMask.sliceTypeMultiplanar);
+                        nv.setSliceType(nv.sliceTypeMultiplanar);
                     }
 
                     document.getElementById('slider-container').style.display = 'block';
                 }).catch(err => console.error("Lỗi tải ảnh 3D:", err));
             }
 
-            // Đồng bộ Slider -> NiiVue an toàn
+            // Đồng bộ Slider -> NiiVue
             const slider = document.getElementById('slice-slider');
             const sliceValueText = document.getElementById('slice-value');
-            let isUpdatingSlider = false;
 
             if (slider) {
                 slider.addEventListener('input', (e) => {
-                    isUpdatingSlider = true;
                     let frac = parseFloat(e.target.value);
-                    if (nvOrig.scene && nvOrig.scene.crosshairPos) {
-                        let pos = nvOrig.scene.crosshairPos;
-                        if (nvOrig.sliceType === nvOrig.sliceTypeSagittal) nvOrig.setCrosshair([frac, pos[1], pos[2]]);
-                        else if (nvOrig.sliceType === nvOrig.sliceTypeCoronal) nvOrig.setCrosshair([pos[0], frac, pos[2]]);
-                        else nvOrig.setCrosshair([pos[0], pos[1], frac]);
+                    if (nv.scene && nv.scene.crosshairPos) {
+                        let pos = nv.scene.crosshairPos;
+                        if (nv.sliceType === nv.sliceTypeSagittal) nv.setCrosshair([frac, pos[1], pos[2]]);
+                        else if (nv.sliceType === nv.sliceTypeCoronal) nv.setCrosshair([pos[0], frac, pos[2]]);
+                        else nv.setCrosshair([pos[0], pos[1], frac]);
                     }
-                    setTimeout(() => { isUpdatingSlider = false; }, 50);
                 });
 
-                nvOrig.onLocationChange = function (data) {
-                    if (isUpdatingSlider) return;
+                nv.onLocationChange = function (data) {
                     if (data && data.fracPos) {
                         let frac = data.fracPos[2];
-                        if (nvOrig.sliceType === nvOrig.sliceTypeSagittal) frac = data.fracPos[0];
-                        else if (nvOrig.sliceType === nvOrig.sliceTypeCoronal) frac = data.fracPos[1];
+                        if (nv.sliceType === nv.sliceTypeSagittal) frac = data.fracPos[0];
+                        else if (nv.sliceType === nv.sliceTypeCoronal) frac = data.fracPos[1];
 
-                        let newText = frac.toFixed(2);
-                        if (sliceValueText.textContent !== newText) {
-                            slider.value = frac;
-                            sliceValueText.textContent = newText;
-                        }
+                        slider.value = frac;
+                        sliceValueText.textContent = frac.toFixed(2);
                     }
                 };
             }
 
-            // Xử lý nút bấm chuyển đổi 2D/3D
+            // 👉 XỬ LÝ NÚT BẬT/TẮT LỚP MÀU AI (OVERLAY TOGGLE)
+            document.getElementById('btn-view-orig').addEventListener('click', (e) => {
+                if (nv.volumes.length > 1) nv.setOpacity(1, 0.0); // Chỉnh độ mờ lớp AI về 0
+                e.target.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-navy-700 text-white transition-all shadow-md";
+                document.getElementById('btn-view-ai').className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all";
+            });
+
+            document.getElementById('btn-view-ai').addEventListener('click', (e) => {
+                if (nv.volumes.length > 1) nv.setOpacity(1, 0.6); // Chỉnh độ mờ lớp AI về 0.6
+                e.target.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-md";
+                document.getElementById('btn-view-orig').className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all";
+            });
+
+            // Xử lý Layout
             document.getElementById('btn-multiplanar').addEventListener('click', (e) => {
-                nvOrig.setSliceType(nvOrig.sliceTypeMultiplanar); nvMask.setSliceType(nvMask.sliceTypeMultiplanar);
+                nv.setSliceType(nv.sliceTypeMultiplanar);
                 e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-lg border border-emerald-500/50";
                 document.getElementById('btn-3drender').className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600";
-                document.getElementById('slider-container').style.display = 'block';
             });
 
             document.getElementById('btn-3drender').addEventListener('click', (e) => {
-                nvOrig.setSliceType(nvOrig.sliceTypeRender); nvMask.setSliceType(nvMask.sliceTypeRender);
+                nv.setSliceType(nv.sliceTypeRender);
                 e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-lg border border-emerald-500/50";
                 document.getElementById('btn-multiplanar').className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600";
-                document.getElementById('slider-container').style.display = 'none';
             });
         });
     {% endif %}
