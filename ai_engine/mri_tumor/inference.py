@@ -1,40 +1,97 @@
 import torch
-import monai
-from monai.transforms import (
-    Compose, LoadImaged, EnsureChannelFirstd, NormalizeIntensityd
-)
+import numpy as np
+import nibabel as nib
+import traceback
 from monai.networks.nets import SwinUNETR
 from monai.inferers import sliding_window_inference
-import nibabel as nib
-import numpy as np
+import torch.nn.functional as F
+import os
+from .model import get_swin_unetr_model
 
 
 class MRITumorPredictor:
     def __init__(self, weights_path):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print("Đang khởi tạo SwinUNETR cho MRI trên", self.device)
+        try:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print("=" * 50)
+            print(f"🚀 KHỞI TẠO SWIN-UNETR TRÊN THIẾT BỊ: {self.device.type.upper()}")
 
-        # 1. Khởi tạo cấu trúc mô hình
-        self.model = SwinUNETR(
-            img_size=(96, 96, 96),
-            in_channels=4,
-            out_channels=3,
-            feature_size=24,
-            use_checkpoint=True,
-        ).to(self.device)
+            if not os.path.exists(weights_path):
+                raise FileNotFoundError(f"KHÔNG TÌM THẤY FILE TRỌNG SỐ Ở ĐƯỜNG DẪN: {weights_path}")
 
-        # 2. CHỈ CẦN NÉM TRỌNG SỐ VÀO ĐÂY:
-        # self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
-        self.model.eval()
+            # Khởi tạo mô hình từ file model.py
+            self.model = get_swin_unetr_model(self.device)
 
-        # 3. Tiền xử lý (Giống lúc train)
-        self.transform = Compose([
-            LoadImaged(keys=["image"]),
-            EnsureChannelFirstd(keys=["image"]),
-            NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-        ])
+            # Load trọng số an toàn
+            weights = torch.load(weights_path, map_location=self.device, weights_only=True)
+            self.model.load_state_dict(weights)
+            self.model.eval()
+            print("✅ TẢI MÔ HÌNH THÀNH CÔNG!")
+            print("=" * 50)
 
-    def predict_and_save_mask(self, flair_path, t1_path, t1ce_path, t2_path, output_mask_path):
-        # ... Hàm này sẽ ghép 4 file lại, chạy qua mô hình,
-        # và lưu kết quả thành 1 file segmentation.nii.gz (mask) để NiiVue hiển thị.
-        pass
+        except Exception as e:
+            print("❌ LỖI NGHIÊM TRỌNG KHI KHỞI TẠO MÔ HÌNH MRI:")
+            traceback.print_exc()
+            raise e
+
+    def predict_and_save_mask(self, input_nifti_path, output_mask_path):
+        img_nii = nib.load(input_nifti_path)
+        img_data = img_nii.get_fdata()
+        orig_shape = img_data.shape
+        affine = img_nii.affine
+
+        if len(img_data.shape) == 3:
+            img_data = np.stack([img_data] * 4, axis=0)
+        elif len(img_data.shape) == 4 and img_data.shape[-1] == 4:
+            img_data = np.transpose(img_data, (3, 0, 1, 2))
+        else:
+            img_data = np.stack([img_data[..., 0]] * 4, axis=0)
+
+        for c in range(4):
+            channel_data = img_data[c]
+            mask = channel_data > 0
+            if mask.any():
+                mean, std = channel_data[mask].mean(), channel_data[mask].std()
+                img_data[c] = (channel_data - mean) / (std + 1e-8)
+
+        input_tensor = torch.tensor(img_data, dtype=torch.float32).unsqueeze(0).to(self.device)
+        input_tensor = F.interpolate(input_tensor, size=(240, 240, orig_shape[2]), mode='trilinear', align_corners=False)
+
+        with torch.no_grad():
+            val_outputs = sliding_window_inference(
+                inputs=input_tensor,
+                roi_size=(96, 96, 96),
+                sw_batch_size=2,
+                predictor=self.model,
+                overlap=0.25
+            )
+            val_outputs = torch.sigmoid(val_outputs)
+
+        val_outputs = F.interpolate(val_outputs, size=orig_shape, mode='trilinear', align_corners=False)
+        val_outputs = val_outputs.squeeze(0).cpu().numpy()
+
+        segment = (val_outputs > 0.5).astype(np.uint8)
+        prediction = np.zeros_like(segment[0], dtype=np.uint8)
+
+        prediction[segment[1] == 1] = 2
+        prediction[segment[0] == 1] = 1
+        prediction[segment[2] == 1] = 3
+
+        mask_nii = nib.Nifti1Image(prediction, affine)
+        nib.save(mask_nii, output_mask_path)
+
+        has_tumor = np.any(prediction > 0)
+        max_prob = float(np.max(val_outputs))
+
+        if has_tumor:
+            label = "Brain Tumor Detected (Glioma)"
+            prob_str = f"{max_prob * 100:.2f}%"
+        else:
+            label = "No Tumor Detected"
+            prob_str = f"{(1.0 - max_prob) * 100:.2f}%"
+
+        return {
+            "has_tumor": bool(has_tumor),
+            "prediction_label": label,
+            "probability": prob_str
+        }

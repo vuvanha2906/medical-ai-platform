@@ -1,10 +1,9 @@
 import os
+import traceback
 import zipfile
 import shutil
-
 import dicom2nifti
 import nibabel as nib
-import time
 from pathlib import Path
 from celery import shared_task
 from PIL import Image
@@ -13,14 +12,32 @@ import numpy as np
 from pydicom.pixel_data_handlers.util import apply_voi_lut
 from django.conf import settings
 from ai_engine.xray.inference import XrayPredictor
+from ai_engine.mri_tumor.inference import MRITumorPredictor
 from .models import Study, Prediction
 
 PROJECT_ROOT = Path(settings.BASE_DIR).parent
-# Khởi tạo predictor 1 lần duy nhất khi worker chạy (để không tốn thời gian load weights mỗi lần dự đoán)
-# Đảm bảo file .pth đã nằm đúng chỗ
 WEIGHTS_PATH = PROJECT_ROOT / 'ai_engine' / 'xray' / 'weights' / 'best_nih_densenet121.pth'
-print(f"Loading weights from: {WEIGHTS_PATH}")
-predictor = XrayPredictor(weights_path=WEIGHTS_PATH)
+MRI_WEIGHTS_PATH = PROJECT_ROOT / 'ai_engine' / 'mri_tumor' / 'weights' / 'best_swinunetr_brats.pth'
+
+_xray_predictor = None
+_mri_predictor = None
+
+
+def get_xray_predictor():
+    global _xray_predictor
+    if _xray_predictor is None:
+        print(f"Loading XRAY weights from: {WEIGHTS_PATH}")
+        _xray_predictor = XrayPredictor(weights_path=WEIGHTS_PATH)
+    return _xray_predictor
+
+
+def get_mri_predictor():
+    global _mri_predictor
+    if _mri_predictor is None:
+        print(f"Loading MRI weights from: {MRI_WEIGHTS_PATH}")
+        _mri_predictor = MRITumorPredictor(weights_path=MRI_WEIGHTS_PATH)
+    return _mri_predictor
+
 
 def convert_dicom_to_png(study):
     """Đọc DICOM, chuyển thành PNG và cập nhật lại đường dẫn cho mô hình và Web UI."""
@@ -80,6 +97,7 @@ def process_xray_study(study_id, image_path):
         # 2. CHẠY SUY LUẬN AI
         # LƯU Ý: Truyền processed_image_path thay vì image_path gốc!
         # ==========================================
+        predictor = get_xray_predictor()
         result = predictor.predict_and_explain(
             image_path=processed_image_path,
             output_heatmap_base_path=heatmap_base_full_path
@@ -148,6 +166,7 @@ def get_dicom_plane(image_orientation):
     else:
         return 'Axial'
 
+
 # =================================================================
 # HELPER: CHUYỂN ĐỔI BẤT KỲ ĐỊNH DẠNG NÀO SANG NIFTI (.nii.gz)
 # =================================================================
@@ -161,15 +180,19 @@ def ensure_nifti_format(file_path, output_dir):
     if ext.endswith('.nii') or ext.endswith('.nii.gz'):
         return file_path, True
 
-    # TRƯỜNG HỢP 2: Là 1 file DICOM đơn lẻ -> Chắc chắn là 2D
+    # TRƯỜNG HỢP 2: Là 1 file DICOM đơn lẻ hoặc Multi-frame DICOM
     elif ext.endswith('.dcm') or ext.endswith('.dicom'):
         dicom_data = pydicom.dcmread(file_path)
         pixel_array = dicom_data.pixel_array.astype(np.float32)
 
-        # SỬA LỖI LẬT ẢNH: Xoay ma trận từ (Y, X) sang (X, Y)
-        pixel_array = np.transpose(pixel_array)
+        # Nếu là Multi-frame DICOM (Ví dụ file của bạn có 21 ảnh -> shape: 21, 512, 512)
+        if len(pixel_array.shape) == 3:
+            # SỬA LỖI ĐẢO TRỤC: (Z, Y, X) -> (X, Y, Z)
+            pixel_array = np.transpose(pixel_array, (2, 1, 0))
 
-        if len(pixel_array.shape) == 2:
+        # Nếu là 1 ảnh DICOM 2D duy nhất (shape: 512, 512)
+        elif len(pixel_array.shape) == 2:
+            pixel_array = np.transpose(pixel_array)  # (Y, X) -> (X, Y)
             pixel_array = np.expand_dims(pixel_array, axis=-1)
 
         nii_img = nib.Nifti1Image(pixel_array, affine=np.eye(4))
@@ -236,6 +259,7 @@ def ensure_nifti_format(file_path, output_dir):
     else:
         raise ValueError("Định dạng file không được hỗ trợ.")
 
+
 # backend/apps/ai_engine/tasks.py (Phác thảo logic)
 
 @shared_task
@@ -252,17 +276,7 @@ def process_mri_study(study_id, uploaded_file_path):
         # NHẬN BIẾN has_3_planes TỪ HELPER
         nifti_file, has_3_planes = ensure_nifti_format(uploaded_file_path, work_dir)
 
-        # GIẢ LẬP SUY LUẬN AI (Giữ nguyên)
-        time.sleep(2)
-        img_nii = nib.load(nifti_file)
-        img_data = img_nii.get_fdata()
-        affine = img_nii.affine
-
-        fake_mask = np.zeros(img_data.shape, dtype=np.uint8)
-        cx, cy, cz = img_data.shape[0] // 2, img_data.shape[1] // 2, img_data.shape[2] // 2
-        fake_mask[cx - 20:cx + 20, cy - 20:cy + 20, cz - 5:cz + 5] = 2
-
-        mask_nii = nib.Nifti1Image(fake_mask, affine)
+        print("Đang chạy mô hình AI SwinUNETR...")
 
         bg_filename = f"mri_bg_study_{study_id}.nii.gz"
         mask_filename = f"mri_mask_study_{study_id}.nii.gz"
@@ -275,19 +289,30 @@ def process_mri_study(study_id, uploaded_file_path):
 
         os.makedirs(os.path.dirname(bg_full_path), exist_ok=True)
         shutil.copy(nifti_file, bg_full_path)
-        nib.save(mask_nii, mask_full_path)
+
+        # ==========================================
+        # GỌI SUY LUẬN THẬT VÀ NHẬN KẾT QUẢ
+        # ==========================================
+        predictor = get_mri_predictor()
+        inference_result = predictor.predict_and_save_mask(nifti_file, mask_full_path)
+        # ==========================================
+        # CẬP NHẬT DATABASE VỚI KẾT QUẢ ĐỘNG
+        # ==========================================
+        heatmaps_dict = {
+            'background_url': f"{settings.MEDIA_URL}heatmaps/{bg_filename}",
+            'force_2d': not has_3_planes
+        }
+
+        # Chỉ truyền mask_url cho giao diện nếu AI thực sự tìm thấy khối u
+        if inference_result['has_tumor']:
+            heatmaps_dict['mask_url'] = f"{settings.MEDIA_URL}heatmaps/{mask_filename}"
 
         Prediction.objects.update_or_create(
             study=study,
             defaults={
-                'prediction_label': 'High-grade Glioma',
-                'probability': '94.2%',
-                'heatmaps': {
-                    'background_url': f"{settings.MEDIA_URL}heatmaps/{bg_filename}",
-                    'mask_url': f"{settings.MEDIA_URL}heatmaps/{mask_filename}",
-                    # CHUYỂN CỜ "FORCE 2D" CHO FRONTEND
-                    'force_2d': not has_3_planes
-                }
+                'prediction_label': inference_result['prediction_label'],  # Nhãn lấy từ mô hình
+                'probability': inference_result['probability'],  # Xác suất lấy từ mô hình
+                'heatmaps': heatmaps_dict
             }
         )
 
@@ -296,8 +321,18 @@ def process_mri_study(study_id, uploaded_file_path):
         shutil.rmtree(work_dir, ignore_errors=True)
         return {'study_id': study_id, 'status': 'Success'}
 
+
     except Exception as e:
+
         if 'study' in locals():
             study.status = 'Failed'
+
             study.save()
+
+        print(f"\n❌ LỖI CRASH HỆ THỐNG MRI TẠI STUDY {study_id}:")
+
+        traceback.print_exc()  # Bắt buộc phải có dòng này để in lỗi đỏ
+
+        print("-" * 50)
+
         return {'study_id': study_id, 'status': 'Failed', 'error': str(e)}

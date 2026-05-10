@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import mimetypes
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -122,3 +123,9 @@ AUTH_USER_MODEL = 'users.CustomUser'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# Ép Django hiểu .gz là một file dữ liệu độc lập, không phải là một định dạng nén web
+mimetypes.add_type('application/gzip', '.gz')
+
+# Xóa bỏ đuôi .gz khỏi danh sách tự động giải nén của hệ thống Windows/Django
+if '.gz' in mimetypes.encodings_map:
+    del mimetypes.encodings_map['.gz']

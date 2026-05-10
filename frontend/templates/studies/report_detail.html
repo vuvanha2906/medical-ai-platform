@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://unpkg.com/@niivue/niivue@0.68.2/dist/niivue.umd.js"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap"
@@ -16,19 +17,8 @@
             theme: {
                 extend: {
                     colors: {
-                        navy: {
-                            950: '#020617',
-                            900: '#0a1628',
-                            850: '#0c1a30',
-                            800: '#0f2240',
-                            700: '#1a365d',
-                            600: '#2d4a6f',
-                        },
-                        emerald: {
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                        }
+                        navy: { 950: '#020617', 900: '#0a1628', 850: '#0c1a30', 800: '#0f2240', 700: '#1a365d', 600: '#2d4a6f' },
+                        emerald: { 500: '#10b981', 600: '#059669', 700: '#047857' }
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -40,105 +30,28 @@
         }
     </script>
     <style>
-        body {
-            background: linear-gradient(135deg, #020617 0%, #0a1628 50%, #0f2240 100%);
-        }
+        body { background: linear-gradient(135deg, #020617 0%, #0a1628 50%, #0f2240 100%); }
+        .glass-dark { background: rgba(15, 34, 64, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.15); }
+        .report-paper { background: linear-gradient(180deg, #0f2240 0%, #0a1628 100%); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .image-viewer { background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%); box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3); }
+        .heatmap-overlay { mix-blend-mode: screen; }
+        .confidence-bar { background: rgba(255, 255, 255, 0.1); }
+        .confidence-fill-high { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
+        .section-divider { height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.1) 80%, transparent 100%); }
+        .validation-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .validation-btn:active { transform: scale(0.98); }
+        .stamp-approved { color: #10b981; border: 3px solid #10b981; transform: rotate(-12deg); opacity: 0; transition: opacity 0.3s ease; }
+        .stamp-approved.visible { opacity: 1; }
 
-        .glass-dark {
-            background: rgba(15, 34, 64, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(16, 185, 129, 0.15);
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f2240; }
+        ::-webkit-scrollbar-thumb { background: #1a365d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2d4a6f; }
 
-        .report-paper {
-            background: linear-gradient(180deg, #0f2240 0%, #0a1628 100%);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        canvas:focus { outline: none; }
 
-        .image-viewer {
-            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5), 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .heatmap-overlay {
-            mix-blend-mode: screen;
-        }
-
-        .confidence-bar {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .confidence-fill-high {
-            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-        }
-
-        .section-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 20%, rgba(255, 255, 255, 0.1) 80%, transparent 100%);
-        }
-
-        .validation-btn {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .validation-btn:active {
-            transform: scale(0.98);
-        }
-
-        .stamp-approved {
-            color: #10b981;
-            border: 3px solid #10b981;
-            transform: rotate(-12deg);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .stamp-approved.visible {
-            opacity: 1;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0f2240;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #1a365d;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #2d4a6f;
-        }
-
-        /* Ẩn outline của canvas NiiVue và TÙY CHỈNH RANGE SLIDER */
-        canvas:focus {
-            outline: none;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: #10b981;
-            cursor: pointer;
-            margin-top: -6px;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        }
-
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #1a365d;
-            border-radius: 2px;
-        }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #10b981; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #1a365d; border-radius: 2px; }
     </style>
 </head>
 <body class="min-h-screen font-sans text-gray-200 antialiased">
@@ -147,53 +60,30 @@
     <div class="max-w-[1800px] mx-auto px-6 py-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <a href="{% url 'studies:study_list' %}"
-                   class="flex items-center gap-2 text-gray-400 hover:text-emerald-400 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
+                <a href="{% url 'studies:study_list' %}" class="flex items-center gap-2 text-gray-400 hover:text-emerald-400 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     <span class="text-sm font-medium">Back to Studies</span>
                 </a>
                 <div class="h-5 w-px bg-navy-600"></div>
                 <nav class="flex items-center gap-2 text-sm">
                     <span class="text-gray-500">Studies</span>
-                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
+                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="text-emerald-400 font-mono">ID: {{ study.id }}</span>
                 </nav>
             </div>
-
             <div class="text-center">
                 <h1 class="text-white font-semibold tracking-tight">AI Diagnostic Report</h1>
                 <p class="text-xs text-gray-400 font-mono">Generated: {{ study.created_at|date:"Y-m-d H:i" }}</p>
             </div>
-
             <div class="flex items-center gap-3">
                 <button class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-                    </svg>
-                    Print
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Print
                 </button>
-
-                <a href="{% url 'studies:download_pdf' study.id %}" target="_blank"
-                   class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
-                    Export PDF
+                <a href="{% url 'studies:download_pdf' study.id %}" target="_blank" class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white border border-navy-600 hover:border-emerald-500/50 rounded-lg transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Export PDF
                 </a>
-
                 <button class="flex items-center gap-2 px-4 py-1.5 text-sm text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684z"/>
-                    </svg>
-                    Share
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684z"/></svg> Share
                 </button>
             </div>
         </div>
@@ -214,9 +104,7 @@
                         <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Modality</p>
                         <div class="flex items-center gap-2">
                             <span class="w-6 h-6 rounded bg-blue-500/20 flex items-center justify-center">
-                              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path
-                                      stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M3 4a1 1 0 011-1 1h16a1 1 0 011 1 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM7 10h10M7 14h10"/></svg>
+                              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                             </span>
                             <span class="text-white font-medium">{{ study.modality|default:"Unknown" }}</span>
                         </div>
@@ -241,55 +129,70 @@
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h2 class="text-white font-semibold">3D MRI Semantic Segmentation</h2>
-                            <p class="text-[11px] text-gray-400 uppercase tracking-wider mt-1">Interactive Viewer
-                                (Scroll or use slider to Pan, Drag to Rotate in 3D)</p>
+                            <p class="text-[11px] text-gray-400 uppercase tracking-wider mt-1">Interactive Viewer (Scroll to Slice, Right-Click to Zoom, Shift+Drag to Pan)</p>
                         </div>
 
                         <div class="flex gap-2">
-                            <button id="btn-multiplanar"
-                                    class="px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50">
-                                3-Plane View
-                            </button>
-                            <button id="btn-3drender"
-                                    class="px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all">
-                                3D Render
-                            </button>
+                            <button id="btn-multiplanar" class="px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50">3-Plane View</button>
+                            <button id="btn-3drender" class="px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all">3D Render</button>
                         </div>
                     </div>
 
                     <div id="slider-container" class="mb-4 hidden">
                         <div class="flex items-center justify-between mb-1">
-                            <label for="slice-slider"
-                                   class="text-xs text-gray-400 font-medium uppercase tracking-wider">Axial Slice
-                                Navigation</label>
+                            <label for="slice-slider" class="text-xs text-gray-400 font-medium uppercase tracking-wider">Axial Slice Navigation</label>
                             <span id="slice-value" class="text-xs font-mono text-emerald-400">0.50</span>
                         </div>
-                        <input type="range" id="slice-slider" min="0" max="1" step="0.01" value="0.5"
-                               class="w-full appearance-none bg-transparent">
+                        <input type="range" id="slice-slider" min="0" max="1" step="0.01" value="0.5" class="w-full appearance-none bg-transparent">
                     </div>
 
-                    <div class="image-viewer rounded-xl overflow-hidden relative w-full h-[550px] border border-white/5"
-                         style="position: relative;">
-                        <canvas id="mri-canvas" class="w-full h-full" style="outline: none;"></canvas>
-                    </div>
-
-                    {% if prediction %}
-                        <div class="mt-4 flex items-center justify-between bg-navy-900/50 p-3 rounded-lg border border-white/5">
-                            <div class="flex gap-4">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-3 h-3 rounded-sm" style="background-color: #fca5a5;"></span>
-                                    <span class="text-gray-300">Necrotic Core (NCR)</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-3 h-3 rounded-sm" style="background-color: #93c5fd;"></span>
-                                    <span class="text-gray-300">Edema (ED)</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-3 h-3 rounded-sm" style="background-color: #86efac;"></span>
-                                    <span class="text-gray-300">Enhancing Tumor (ET)</span>
-                                </div>
+                    {% if study.status == 'Processing' or study.status == 'Pending' %}
+                        <div class="flex flex-col items-center justify-center w-full h-[450px] bg-navy-900/50 rounded-xl border border-white/5 shadow-inner">
+                            <div class="relative w-16 h-16 flex items-center justify-center mb-6">
+                                <div class="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div>
+                                <div class="absolute inset-0 border-4 border-emerald-500 rounded-full border-t-transparent animate-spin"></div>
+                                <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <h3 class="text-white font-semibold text-lg">AI Engine is processing 3D Volume...</h3>
+                            <p class="text-sm text-gray-400 mt-2">SwinUNETR is analyzing the slices. This usually takes 15 - 30 seconds.</p>
+                            <div class="w-64 h-1 bg-navy-800 rounded-full mt-5 overflow-hidden">
+                                <div class="h-full bg-emerald-500 w-1/2 animate-pulse rounded-full" style="animation-duration: 1s;"></div>
                             </div>
                         </div>
+                        <script> setTimeout(function () { window.location.reload(); }, 3000); </script>
+
+                    {% else %}
+
+                        <div class="flex flex-row gap-4 w-full h-[450px]">
+                            <div class="relative w-1/2 h-full bg-[#0a1628] rounded-xl overflow-hidden border border-white/5">
+                                <div class="absolute top-3 left-3 bg-navy-900/80 px-2 py-1 rounded text-[10px] text-gray-300 z-10 pointer-events-none">Original MRI</div>
+                                <canvas id="mri-canvas-orig" style="position: absolute; top:0; left:0; width:100%; height:100%; outline:none;"></canvas>
+                            </div>
+
+                            <div class="relative w-1/2 h-full bg-[#0a1628] rounded-xl overflow-hidden border border-white/5">
+                                <div class="absolute top-3 left-3 bg-emerald-900/80 px-2 py-1 rounded text-[10px] text-emerald-300 z-10 pointer-events-none">AI Segmentation</div>
+                                <canvas id="mri-canvas-mask" style="position: absolute; top:0; left:0; width:100%; height:100%; outline:none;"></canvas>
+                            </div>
+                        </div>
+
+                        {% if prediction %}
+                            <div class="mt-4 flex items-center justify-between bg-navy-900/50 p-3 rounded-lg border border-white/5">
+                                <div class="flex gap-4">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-3 h-3 rounded-sm" style="background-color: #ff0000;"></span>
+                                        <span class="text-gray-300">Necrotic Core (NCR)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-3 h-3 rounded-sm" style="background-color: #00ff00;"></span>
+                                        <span class="text-gray-300">Edema (ED)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="w-3 h-3 rounded-sm" style="background-color: #0000ff;"></span>
+                                        <span class="text-gray-300">Enhancing Tumor (ET)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
                     {% endif %}
 
                 {% else %}
@@ -298,12 +201,8 @@
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-400">View Mode:</span>
                             <div class="flex bg-navy-800 rounded-lg p-0.5">
-                                <button class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">
-                                    Side by Side
-                                </button>
-                                <button class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">
-                                    Overlay
-                                </button>
+                                <button class="px-3 py-1 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all">Side by Side</button>
+                                <button class="px-3 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all">Overlay</button>
                             </div>
                         </div>
                     </div>
@@ -315,15 +214,11 @@
                             </div>
                             <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
                                 {% if study.image %}
-                                    <img src="{{ study.image.url }}" alt="Original Study Image"
-                                         class="w-full h-full object-contain"/>
+                                    <img src="{{ study.image.url }}" alt="Original Study Image" class="w-full h-full object-contain"/>
                                 {% else %}
-                                    <div class="flex h-full items-center justify-center text-gray-500">No Image
-                                        Available
-                                    </div>
+                                    <div class="flex h-full items-center justify-center text-gray-500">No Image Available</div>
                                 {% endif %}
-                                <div class="absolute inset-0 opacity-10 pointer-events-none"
-                                     style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                                <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
                             </div>
                         </div>
 
@@ -331,22 +226,19 @@
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-sm text-gray-400 font-medium">AI Attention Map (xAI)</span>
                                 <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                                    <input type="checkbox" id="toggleHeatmap" checked
-                                           class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500">
+                                    <input type="checkbox" id="toggleHeatmap" checked class="w-3 h-3 rounded border-gray-600 bg-navy-800 text-emerald-500 focus:ring-emerald-500">
                                     Show Overlay
                                 </label>
                             </div>
 
                             <div class="image-viewer rounded-xl overflow-hidden relative group aspect-square">
                                 {% if study.image %}
-                                    <img src="{{ study.image.url }}" alt="Original Study Image"
-                                         class="w-full h-full object-contain"/>
+                                    <img src="{{ study.image.url }}" alt="Original Study Image" class="w-full h-full object-contain"/>
                                 {% endif %}
 
                                 <div id="heatmapOverlay" class="absolute inset-0 z-10 transition-opacity duration-300">
                                     {% if prediction and prediction.heatmaps %}
-                                        <img id="currentHeatmap" src="" alt="Heatmap"
-                                             class="w-full h-full object-contain heatmap-overlay opacity-80"/>
+                                        <img id="currentHeatmap" src="" alt="Heatmap" class="w-full h-full object-contain heatmap-overlay opacity-80"/>
                                     {% else %}
                                         <div class="w-full h-full flex items-center justify-center text-gray-500 text-xs bg-navy-900">
                                             No Heatmap Available
@@ -356,8 +248,7 @@
 
                                 <div class="absolute bottom-3 right-3 bg-black/70 rounded-lg p-2 z-20">
                                     <p class="text-[10px] text-gray-400 mb-1.5 text-center">Attention Intensity</p>
-                                    <div class="w-24 h-2 rounded-full"
-                                         style="background: linear-gradient(90deg, #3b82f6 0%, #22c55e 25%, #eab308 50%, #f97316 75%, #ef4444 100%);"></div>
+                                    <div class="w-24 h-2 rounded-full" style="background: linear-gradient(90deg, #3b82f6 0%, #22c55e 25%, #eab308 50%, #f97316 75%, #ef4444 100%);"></div>
                                     <div class="flex justify-between text-[9px] text-gray-500 mt-0.5">
                                         <span>Low</span><span>High</span>
                                     </div>
@@ -366,12 +257,10 @@
 
                             {% if prediction and prediction.heatmaps %}
                                 <div class="mt-3">
-                                    <p class="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Detected Findings
-                                        (Click to view region)</p>
+                                    <p class="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Detected Findings (Click to view region)</p>
                                     <div class="flex flex-wrap gap-2" id="disease-toggles">
                                         {% for disease, url in prediction.heatmaps.items %}
-                                            <button onclick="changeHeatmap('{{ url }}', this)"
-                                                    class="heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700">
+                                            <button onclick="changeHeatmap('{{ url }}', this)" class="heatmap-toggle-btn px-3 py-1.5 text-xs font-medium rounded-lg border transition-all bg-navy-800 text-gray-400 border-gray-700 hover:bg-navy-700">
                                                 {{ disease }}
                                             </button>
                                         {% endfor %}
@@ -386,7 +275,6 @@
 
         <div class="col-span-5 space-y-4">
             <div class="report-paper rounded-xl overflow-hidden">
-
                 <div class="bg-gradient-to-r from-navy-800 to-navy-700 px-6 py-4">
                     <div class="flex items-center justify-between">
                         <div>
@@ -403,33 +291,27 @@
                 </div>
 
                 <div class="p-6 space-y-6">
-
                     <div>
                         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                            Primary Finding
+                            <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Primary Finding
                         </h3>
                         {% if prediction %}
                             <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
                                 <div class="flex items-start justify-between">
                                     <div>
                                         <h4 class="font-semibold text-red-100">{{ prediction.prediction_label }}</h4>
-                                        <p class="text-sm text-red-200/70 mt-1">AI detected patterns indicative of this
-                                            condition.</p>
+                                        <p class="text-sm text-red-200/70 mt-1">AI detected patterns indicative of this condition.</p>
                                     </div>
                                 </div>
                             </div>
                         {% else %}
-                            <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4">
-                                <p class="text-sm text-gray-500">No prediction data available for this study.</p>
-                            </div>
+                            <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4"><p class="text-sm text-gray-500">No prediction data available for this study.</p></div>
                         {% endif %}
                     </div>
 
                     <div>
                         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                            Detection Confidence
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Detection Confidence
                         </h3>
                         {% if prediction %}
                             <div class="space-y-3">
@@ -452,21 +334,13 @@
 
                     <div>
                         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                            AI-Generated Summary
+                            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> AI-Generated Summary
                         </h3>
                         <div class="bg-navy-800/50 border border-white/5 rounded-lg p-4">
                             <p class="text-gray-300 leading-relaxed font-serif text-[15px]">
-                                The {% if study.modality|lower == 'mri' %}MRI scan{% else %}radiograph{% endif %}
-                                demonstrates patterns consistent with the detected <strong>
-                                {{ prediction.prediction_label|default:"condition" }}</strong>. The highlighted regions
-                                in the attention map indicate the primary areas of concern identified by the neural
-                                network.
+                                The {% if study.modality|lower == 'mri' %}MRI scan{% else %}radiograph{% endif %} demonstrates patterns consistent with the detected <strong>{{ prediction.prediction_label|default:"condition" }}</strong>. The highlighted regions in the attention map indicate the primary areas of concern identified by the neural network.
                             </p>
-                            <p class="text-gray-400 text-sm mt-4 italic">
-                                Recommendation: Clinical correlation and possible follow-up imaging or laboratory workup
-                                advised.
-                            </p>
+                            <p class="text-gray-400 text-sm mt-4 italic">Recommendation: Clinical correlation and possible follow-up imaging or laboratory workup advised.</p>
                         </div>
                     </div>
 
@@ -474,88 +348,39 @@
 
                     <div>
                         <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-                            Quantitative Measurements
-                        </h3>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="bg-navy-800/50 rounded-lg p-3 border border-white/5">
-                                <p class="text-xs text-gray-500 mb-1">Image Quality Score</p>
-                                <p class="font-mono font-semibold text-gray-200">8.7 / 10</p>
-                            </div>
-                            <div class="bg-navy-800/50 rounded-lg p-3 border border-white/5">
-                                <p class="text-xs text-gray-500 mb-1">Confidence Interval</p>
-                                <p class="font-mono font-semibold text-gray-200"> 4.2%</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-divider"></div>
-
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
-                            Physician Validation
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span> Physician Validation
                         </h3>
 
-                        <div id="validationPending"
-                             class="border-2 border-dashed border-gray-600 bg-navy-900/30 rounded-lg p-5 text-center">
-                            <svg class="w-10 h-10 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor"
-                                 viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                            </svg>
+                        <div id="validationPending" class="border-2 border-dashed border-gray-600 bg-navy-900/30 rounded-lg p-5 text-center">
+                            <svg class="w-10 h-10 text-gray-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             <p class="text-gray-300 font-medium mb-1">Awaiting Physician Review</p>
-                            <p class="text-sm text-gray-500">This report requires validation by an authorized
-                                physician</p>
+                            <p class="text-sm text-gray-500">This report requires validation by an authorized physician</p>
                         </div>
 
-                        <div id="validationComplete"
-                             class="hidden border-2 border-emerald-500/50 bg-emerald-900/20 rounded-lg p-5 relative overflow-hidden">
-                            <div class="stamp-approved absolute top-4 right-4 text-2xl font-bold px-4 py-2 rounded-lg"
-                                 id="approvedStamp">APPROVED
-                            </div>
+                        <div id="validationComplete" class="hidden border-2 border-emerald-500/50 bg-emerald-900/20 rounded-lg p-5 relative overflow-hidden">
+                            <div class="stamp-approved absolute top-4 right-4 text-2xl font-bold px-4 py-2 rounded-lg" id="approvedStamp">APPROVED</div>
                             <div class="flex items-start gap-4">
                                 <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor"
-                                         viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M5 13l4 4L19 7"/>
-                                    </svg>
+                                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 </div>
                                 <div>
                                     <p class="font-semibold text-emerald-400">Report Validated</p>
-                                    <p class="text-sm text-gray-300 mt-1">Approved by <strong>Dr. Sarah Chen,
-                                        MD</strong></p>
+                                    <p class="text-sm text-gray-300 mt-1">Approved by <strong>Dr. Sarah Chen, MD</strong></p>
                                     <p class="text-xs text-gray-500 font-mono mt-1" id="approvalTimestamp"></p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex flex-col gap-3 mt-4" id="validationButtons">
-                            <button onclick="approveReport()"
-                                    class="validation-btn w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-lg shadow-emerald-500/20">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M5 13l4 4L19 7"/>
-                                </svg>
-                                Approve Report
+                            <button onclick="approveReport()" class="validation-btn w-full flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-lg shadow-emerald-500/20">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Approve Report
                             </button>
                             <div class="flex gap-3">
-                                <button onclick="requestAmendment()"
-                                        class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-gray-300 font-medium rounded-lg border border-navy-600 hover:border-amber-500/50 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                    Amend
+                                <button onclick="requestAmendment()" class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-gray-300 font-medium rounded-lg border border-navy-600 hover:border-amber-500/50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Amend
                                 </button>
-                                <button onclick="rejectReport()"
-                                        class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-red-400 font-medium rounded-lg border border-navy-600 hover:border-red-500/50 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                    Reject
+                                <button onclick="rejectReport()" class="validation-btn flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-navy-800 hover:bg-navy-700 text-red-400 font-medium rounded-lg border border-navy-600 hover:border-red-500/50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Reject
                                 </button>
                             </div>
                         </div>
@@ -575,22 +400,12 @@
         document.getElementById('validationPending').classList.add('hidden');
         document.getElementById('validationComplete').classList.remove('hidden');
         document.getElementById('validationButtons').classList.add('hidden');
-
         const now = new Date();
         document.getElementById('approvalTimestamp').textContent = now.toISOString().split('.')[0].replace('T', ' ') + ' UTC';
-
-        setTimeout(() => {
-            document.getElementById('approvedStamp').classList.add('visible');
-        }, 100);
+        setTimeout(() => { document.getElementById('approvedStamp').classList.add('visible'); }, 100);
     }
-
-    function requestAmendment() {
-        alert('Amendment workflow initiated.');
-    }
-
-    function rejectReport() {
-        alert('Report rejected. Sent back for manual review.');
-    }
+    function requestAmendment() { alert('Amendment workflow initiated.'); }
+    function rejectReport() { alert('Report rejected. Sent back for manual review.'); }
 
     // ==========================================
     // LOGIC DÀNH RIÊNG CHO X-RAY
@@ -600,9 +415,7 @@
         if (toggleHeatmapBtn) {
             toggleHeatmapBtn.addEventListener('change', function () {
                 const overlay = document.getElementById('heatmapOverlay');
-                if (overlay) {
-                    overlay.style.opacity = this.checked ? '1' : '0';
-                }
+                if (overlay) { overlay.style.opacity = this.checked ? '1' : '0'; }
             });
         }
 
@@ -622,161 +435,120 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             const toggles = document.querySelectorAll('.heatmap-toggle-btn');
-            if (toggles.length > 0) {
-                toggles[0].click();
-            }
+            if (toggles.length > 0) { toggles[0].click(); }
         });
     {% endif %}
 
     // ==========================================
-    // LOGIC DÀNH RIÊNG CHO MRI (NIIVUE) VÀ THANH TRƯỢT
+    // LOGIC DÀNH RIÊNG CHO MRI (NIIVUE 0.68.2) VÀ THANH TRƯỢT
     // ==========================================
-    {% if study.modality|lower == 'mri' %}
+    {% if study.modality|lower == 'mri' and study.status == 'Completed' %}
         document.addEventListener("DOMContentLoaded", () => {
-            console.log("Đang khởi tạo NiiVue 3D Viewer...");
 
-            const nv = new niivue.Niivue({
+            const opts = {
                 show3Dcrosshair: true,
                 backColor: [0.05, 0.1, 0.2, 1],
-                textHeight: 0.04,
                 crosshairColor: [0.1, 0.7, 0.5, 1],
                 dragAndDropEnabled: false
-            });
+            };
 
-            const canvas = document.getElementById('mri-canvas');
-            nv.attachTo('mri-canvas');
+            const nvOrig = new niivue.Niivue(opts);
+            const nvMask = new niivue.Niivue(opts);
 
-            // Chặn cuộn trang web khi lăn chuột trên MRI
-            canvas.addEventListener('wheel', function(e) {
-                e.preventDefault();
-            }, { passive: false });
+            nvOrig.attachTo('mri-canvas-orig');
+            nvMask.attachTo('mri-canvas-mask');
 
-            const sliderContainer = document.getElementById('slider-container');
-            const slider = document.getElementById('slice-slider');
-            const sliderValue = document.getElementById('slice-value');
-
-            var volumeList = [];
+            var volOrig = [];
+            var volMask = [];
 
             {% if prediction and prediction.heatmaps %}
                 {% if prediction.heatmaps.background_url %}
-                volumeList.push({
-                    url: "{{ prediction.heatmaps.background_url }}",
-                    colormap: "gray",
-                    opacity: 1
-                });
+                    volOrig.push({url: "{{ prediction.heatmaps.background_url }}", colormap: "gray", opacity: 1});
+                    volMask.push({url: "{{ prediction.heatmaps.background_url }}", colormap: "gray", opacity: 1});
                 {% endif %}
 
                 {% if prediction.heatmaps.mask_url %}
-                volumeList.push({
-                    url: "{{ prediction.heatmaps.mask_url }}",
-                    colormap: "redyell",
-                    opacity: 0.6
-                });
+                    volMask.push({url: "{{ prediction.heatmaps.mask_url }}", colormap: "roi_i256", opacity: 0.6});
                 {% endif %}
             {% endif %}
 
-            // Load Volume vào NiiVue
-            if (volumeList.length > 0) {
-                nv.loadVolumes(volumeList).then(() => {
-                    console.log("Tải thành công các lớp cắt MRI!");
+            if (volOrig.length > 0) {
+                nvOrig.loadVolumes(volOrig).then(() => {
+                    return nvMask.loadVolumes(volMask);
+                }).then(() => {
 
-                    // LẤY KÍCH THƯỚC ĐẦY ĐỦ CỦA 3 TRỤC (X, Y, Z)
-                    let xDim = nv.volumes[0].hdr.dims[1];
-                    let yDim = nv.volumes[0].hdr.dims[2];
-                    let zDim = nv.volumes[0].hdr.dims[3];
-                    console.log(`Kích thước không gian - X: ${xDim}, Y: ${yDim}, Z: ${zDim}`);
+                    // CỜ ĐỒNG BỘ 1 CHIỀU: An toàn, không gây crash F12
+                    nvOrig.syncWith(nvMask);
 
-                    const btnMultiplanar = document.getElementById('btn-multiplanar');
-                    const btn3DRender = document.getElementById('btn-3drender');
+                    let xDim = nvMask.volumes[0].hdr.dims[1];
+                    let yDim = nvMask.volumes[0].hdr.dims[2];
+                    let zDim = nvMask.volumes[0].hdr.dims[3];
 
                     let force2D = false;
-                    {% if prediction and prediction.heatmaps.force_2d %}
-                        force2D = true;
-                    {% endif %}
+                    {% if prediction and prediction.heatmaps.force_2d %} force2D = true; {% endif %}
 
-                    // THUẬT TOÁN XÁC ĐỊNH MẶT PHẲNG 2D
                     if (xDim < 5 || yDim < 5 || zDim < 5 || force2D) {
                         let minDim = Math.min(xDim, yDim, zDim);
-
-                        // Tự động xoay camera vuông góc với trục mỏng nhất
-                        if (minDim === xDim) {
-                            nv.setSliceType(nv.sliceTypeSagittal);
-                            console.log("Chế độ 2D: Đã tự động xoay sang góc Sagittal.");
-                        } else if (minDim === yDim) {
-                            nv.setSliceType(nv.sliceTypeCoronal);
-                            console.log("Chế độ 2D: Đã tự động xoay sang góc Coronal.");
-                        } else {
-                            nv.setSliceType(nv.sliceTypeAxial);
-                            console.log("Chế độ 2D: Đã tự động xoay sang góc Axial.");
-                        }
-
-                        // Ẩn công cụ 3D, giữ lại thanh trượt
-                        if(sliderContainer) sliderContainer.style.display = 'block';
-                        if(btnMultiplanar) btnMultiplanar.style.display = 'none';
-                        if(btn3DRender) btn3DRender.style.display = 'none';
-
+                        if (minDim === xDim) { nvOrig.setSliceType(nvOrig.sliceTypeSagittal); nvMask.setSliceType(nvMask.sliceTypeSagittal); }
+                        else if (minDim === yDim) { nvOrig.setSliceType(nvOrig.sliceTypeCoronal); nvMask.setSliceType(nvMask.sliceTypeCoronal); }
+                        else { nvOrig.setSliceType(nvOrig.sliceTypeAxial); nvMask.setSliceType(nvMask.sliceTypeAxial); }
                     } else {
-                        // CHẾ ĐỘ 3D HOÀN CHỈNH
-                        nv.setSliceType(nv.sliceTypeMultiplanar);
-                        if(sliderContainer) sliderContainer.style.display = 'block';
-                        if(btnMultiplanar) btnMultiplanar.style.display = 'block';
-                        if(btn3DRender) btn3DRender.style.display = 'block';
+                        nvOrig.setSliceType(nvOrig.sliceTypeMultiplanar);
+                        nvMask.setSliceType(nvMask.sliceTypeMultiplanar);
                     }
 
-                }).catch(err => {
-                    console.error("Lỗi khi tải Volume NiiVue:", err);
-                });
+                    document.getElementById('slider-container').style.display = 'block';
+                }).catch(err => console.error("Lỗi tải ảnh 3D:", err));
             }
 
-            // --- XỬ LÝ 2 NÚT BẤM (3-Plane và 3D Render) ---
-            const btnMultiplanar = document.getElementById('btn-multiplanar');
-            const btn3DRender = document.getElementById('btn-3drender');
+            // Đồng bộ Slider -> NiiVue an toàn
+            const slider = document.getElementById('slice-slider');
+            const sliceValueText = document.getElementById('slice-value');
+            let isUpdatingSlider = false;
 
-            btnMultiplanar.addEventListener('click', (e) => {
-                nv.setSliceType(nv.sliceTypeMultiplanar);
-                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
-                btn3DRender.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
-                if(sliderContainer) sliderContainer.style.display = 'block';
-            });
-
-            btn3DRender.addEventListener('click', (e) => {
-                nv.setSliceType(nv.sliceTypeRender);
-                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500/50";
-                btnMultiplanar.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600 hover:text-white hover:bg-navy-700 transition-all";
-                if(sliderContainer) sliderContainer.style.display = 'none';
-            });
-
-            // --- ĐỒNG BỘ THANH TRƯỢT THEO MẶT PHẲNG HIỆN TẠI ---
-            if(slider) {
+            if (slider) {
                 slider.addEventListener('input', (e) => {
+                    isUpdatingSlider = true;
                     let frac = parseFloat(e.target.value);
-                    sliderValue.textContent = frac.toFixed(2);
-
-                    if (nv.scene && nv.scene.crosshairPos) {
-                        let pos = nv.scene.crosshairPos;
-                        // Map thanh trượt vào đúng trục đang hiển thị
-                        if (nv.sliceType === nv.sliceTypeSagittal) {
-                            nv.setCrosshair([frac, pos[1], pos[2]]);
-                        } else if (nv.sliceType === nv.sliceTypeCoronal) {
-                            nv.setCrosshair([pos[0], frac, pos[2]]);
-                        } else {
-                            nv.setCrosshair([pos[0], pos[1], frac]);
-                        }
+                    if (nvOrig.scene && nvOrig.scene.crosshairPos) {
+                        let pos = nvOrig.scene.crosshairPos;
+                        if (nvOrig.sliceType === nvOrig.sliceTypeSagittal) nvOrig.setCrosshair([frac, pos[1], pos[2]]);
+                        else if (nvOrig.sliceType === nvOrig.sliceTypeCoronal) nvOrig.setCrosshair([pos[0], frac, pos[2]]);
+                        else nvOrig.setCrosshair([pos[0], pos[1], frac]);
                     }
+                    setTimeout(() => { isUpdatingSlider = false; }, 50);
                 });
 
-                nv.onLocationChange = function (data) {
+                nvOrig.onLocationChange = function (data) {
+                    if (isUpdatingSlider) return;
                     if (data && data.fracPos) {
-                        // Lấy tọa độ thanh trượt tùy theo góc nhìn
-                        let frac = data.fracPos[2]; // Mặc định Z (Axial)
-                        if (nv.sliceType === nv.sliceTypeSagittal) frac = data.fracPos[0];
-                        else if (nv.sliceType === nv.sliceTypeCoronal) frac = data.fracPos[1];
+                        let frac = data.fracPos[2];
+                        if (nvOrig.sliceType === nvOrig.sliceTypeSagittal) frac = data.fracPos[0];
+                        else if (nvOrig.sliceType === nvOrig.sliceTypeCoronal) frac = data.fracPos[1];
 
-                        slider.value = frac;
-                        sliderValue.textContent = frac.toFixed(2);
+                        let newText = frac.toFixed(2);
+                        if (sliceValueText.textContent !== newText) {
+                            slider.value = frac;
+                            sliceValueText.textContent = newText;
+                        }
                     }
                 };
             }
+
+            // Xử lý nút bấm chuyển đổi 2D/3D
+            document.getElementById('btn-multiplanar').addEventListener('click', (e) => {
+                nvOrig.setSliceType(nvOrig.sliceTypeMultiplanar); nvMask.setSliceType(nvMask.sliceTypeMultiplanar);
+                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-lg border border-emerald-500/50";
+                document.getElementById('btn-3drender').className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600";
+                document.getElementById('slider-container').style.display = 'block';
+            });
+
+            document.getElementById('btn-3drender').addEventListener('click', (e) => {
+                nvOrig.setSliceType(nvOrig.sliceTypeRender); nvMask.setSliceType(nvMask.sliceTypeRender);
+                e.target.className = "px-4 py-1.5 text-xs font-medium rounded-md bg-emerald-600 text-white shadow-lg border border-emerald-500/50";
+                document.getElementById('btn-multiplanar').className = "px-4 py-1.5 text-xs font-medium rounded-md bg-navy-800 text-gray-400 border border-gray-600";
+                document.getElementById('slider-container').style.display = 'none';
+            });
         });
     {% endif %}
 </script>
