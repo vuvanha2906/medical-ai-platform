@@ -200,7 +200,6 @@ def ensure_nifti_format(file_path, output_dir):
         nib.save(nii_img, nii_path)
         return nii_path, False
 
-    # TRƯỜNG HỢP 3: Là file ZIP chứa chuỗi DICOM
     elif ext.endswith('.zip'):
         extract_dir = os.path.join(output_dir, 'extracted_dicom')
         os.makedirs(extract_dir, exist_ok=True)
@@ -208,56 +207,18 @@ def ensure_nifti_format(file_path, output_dir):
         with zipfile.ZipFile(file_path, 'r') as zip_ref:
             zip_ref.extractall(extract_dir)
 
-        # A. Quét Metadata DICOM để tìm các mặt phẳng
-        detected_planes = set()
+        # 👉 SỬA LỖI TẠI ĐÂY: Quét tìm NIfTI nhưng trả về THƯ MỤC thay vì 1 file
         has_nifti = False
-        nifti_path = None
-
         for root, _, files in os.walk(extract_dir):
             for file in files:
-                f_path = os.path.join(root, file)
                 if file.lower().endswith(('.nii', '.nii.gz')):
                     has_nifti = True
-                    nifti_path = f_path
-                else:
-                    # Thử đọc Header DICOM (Rất nhanh vì không đọc pixel)
-                    try:
-                        dcm = pydicom.dcmread(f_path, stop_before_pixels=True)
-                        if 'ImageOrientationPatient' in dcm:
-                            plane = get_dicom_plane(dcm.ImageOrientationPatient)
-                            detected_planes.add(plane)
-                    except:
-                        continue
+                    break
+            if has_nifti: break
 
-        # Nếu trong ZIP chứa NIfTI (như BraTS), bỏ qua DICOM, xem như 3D
+        # Trả về toàn bộ thư mục giải nén để inference.py tự quét sâu vào trong
         if has_nifti:
-            return nifti_path, True
-
-        # KIỂM TRA ĐIỀU KIỆN 3 MẶT PHẲNG CỦA BẠN:
-        has_3_planes = (len(detected_planes) == 3)
-        print(f"Các mặt phẳng quét được trong DICOM: {detected_planes} -> Đủ 3 mặt: {has_3_planes}")
-
-        # B. Dùng dicom2nifti chuyển chuỗi DICOM thành 1 khối NIfTI (.nii.gz)
-        nifti_out_dir = os.path.join(output_dir, 'nifti_converted')
-        os.makedirs(nifti_out_dir, exist_ok=True)
-
-        try:
-            dicom2nifti.convert_directory(extract_dir, nifti_out_dir, compression=True, reorient=True)
-            generated_files = [f for f in os.listdir(nifti_out_dir) if f.endswith('.nii.gz')]
-            if generated_files:
-                return os.path.join(nifti_out_dir, generated_files[0]), has_3_planes
-        except Exception as e:
-            print(f"Cảnh báo gom DICOM: {e}")
-            # Fallback
-            for root, _, files in os.walk(extract_dir):
-                for file in files:
-                    if file.lower().endswith(('.dcm', '.dicom')):
-                        fallback_path, _ = ensure_nifti_format(os.path.join(root, file), output_dir)
-                        return fallback_path, False
-
-        raise ValueError("Không tìm thấy dữ liệu hợp lệ trong file ZIP.")
-    else:
-        raise ValueError("Định dạng file không được hỗ trợ.")
+            return extract_dir, True
 
 
 # backend/apps/ai_engine/tasks.py (Phác thảo logic)
@@ -273,7 +234,6 @@ def process_mri_study(study_id, uploaded_file_path):
         os.makedirs(work_dir, exist_ok=True)
 
         print(f"Đang xử lý MRI: {uploaded_file_path}")
-        # NHẬN BIẾN has_3_planes TỪ HELPER
         nifti_file, has_3_planes = ensure_nifti_format(uploaded_file_path, work_dir)
 
         print("Đang chạy mô hình AI SwinUNETR...")
@@ -288,30 +248,43 @@ def process_mri_study(study_id, uploaded_file_path):
         mask_full_path = os.path.join(settings.MEDIA_ROOT, mask_rel_path)
 
         os.makedirs(os.path.dirname(bg_full_path), exist_ok=True)
-        shutil.copy(nifti_file, bg_full_path)
 
         # ==========================================
-        # GỌI SUY LUẬN THẬT VÀ NHẬN KẾT QUẢ
+        # 👉 FIX LỖI PERMISSION: CHỌN ĐÚNG FILE ĐỂ COPY LÀM ẢNH NỀN WEB
         # ==========================================
+        if os.path.isdir(nifti_file):
+            # Nếu là thư mục (đã quét ZIP 4 file), lục tìm file T1 làm đại diện
+            nii_files = [os.path.join(root, f) for root, _, files in os.walk(nifti_file) for f in files if
+                         f.lower().endswith(('.nii', '.nii.gz'))]
+            bg_source = nii_files[0]  # Mặc định lấy file đầu tiên
+            for f in nii_files:
+                # Ưu tiên lấy file T1 (t1.nii) để hiển thị cấu trúc não rõ nhất
+                if 't1' in f.lower() and 'ce' not in f.lower() and 'c' not in f.lower():
+                    bg_source = f
+                    break
+            shutil.copy(bg_source, bg_full_path)
+        else:
+            # Nếu chỉ là 1 file đơn lẻ thì copy bình thường
+            shutil.copy(nifti_file, bg_full_path)
+
+        # Gọi mô hình dự đoán
         predictor = get_mri_predictor()
         inference_result = predictor.predict_and_save_mask(nifti_file, mask_full_path)
-        # ==========================================
-        # CẬP NHẬT DATABASE VỚI KẾT QUẢ ĐỘNG
-        # ==========================================
+
+        # Cập nhật kết quả vào CSDL
         heatmaps_dict = {
             'background_url': f"{settings.MEDIA_URL}heatmaps/{bg_filename}",
             'force_2d': not has_3_planes
         }
 
-        # Chỉ truyền mask_url cho giao diện nếu AI thực sự tìm thấy khối u
         if inference_result['has_tumor']:
             heatmaps_dict['mask_url'] = f"{settings.MEDIA_URL}heatmaps/{mask_filename}"
 
         Prediction.objects.update_or_create(
             study=study,
             defaults={
-                'prediction_label': inference_result['prediction_label'],  # Nhãn lấy từ mô hình
-                'probability': inference_result['probability'],  # Xác suất lấy từ mô hình
+                'prediction_label': inference_result['prediction_label'],
+                'probability': inference_result['probability'],
                 'heatmaps': heatmaps_dict
             }
         )
@@ -321,18 +294,11 @@ def process_mri_study(study_id, uploaded_file_path):
         shutil.rmtree(work_dir, ignore_errors=True)
         return {'study_id': study_id, 'status': 'Success'}
 
-
     except Exception as e:
-
         if 'study' in locals():
             study.status = 'Failed'
-
             study.save()
-
         print(f"\n❌ LỖI CRASH HỆ THỐNG MRI TẠI STUDY {study_id}:")
-
-        traceback.print_exc()  # Bắt buộc phải có dòng này để in lỗi đỏ
-
+        traceback.print_exc()
         print("-" * 50)
-
         return {'study_id': study_id, 'status': 'Failed', 'error': str(e)}
