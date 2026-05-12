@@ -57,6 +57,7 @@ dependencies = [
     "jupyter>=1.1.1",
     "pydicom>=3.0.2",
     "monai>=1.5.2",
+    "hd-bet>=2.0.1",
 ]
 
 # Chuẩn PEP 735 mới nhất của uv cho ứng dụng (thay thế cho tool.uv.dev-dependencies)

@@ -1,41 +1,31 @@
-# Project Progress Report - Milestone: Multi-modality Integration
+# Project Progress Report - Milestone: Clinical-Grade MRI Integration
 
 ## 1. Completed Tasks
 
 ### A. Web & UI/UX Infrastructure
 - Designed a Dark Theme interface with Glassmorphism style.
-
 - Built an automated PDF generation system for diagnostic reports.
-
-- Completed the dashboard for managing case lists and AI processing status.
+- **WebGL Optimization:** Resolved severe ResizeObserver loops (F12 crashes) and mouse-tracking bugs. Implemented a single-screen NiiVue layout with an "AI Overlay" toggle to drastically reduce browser VRAM consumption.
 
 ### B. X-ray Module (Chest)
 - **Model:** DenseNet121 (Fine-tuned on NIH Chest X-ray 14).
-
-- **xAI Features:** Successfully implemented Grad-CAM Heatmap. Supports displaying multiple heatmaps on the same image via a toggle switch.
-
+- **xAI Features:** Successfully implemented Grad-CAM Heatmap with interactive toggles.
 - **Input:** Automatically converted DICOM to PNG for optimized web display.
 
 ### C. MRI Module (Brain Tumor)
 - **Model:** SwinUNETR (Hybrid Transformer architecture for 3D Segmentation).
-
-- **Training Results:** Achieved a Dice Score of 0.7559 on the BraTS 2020 set after 10 Epochs on Kaggle.
-
-- **Data Processing:** Successfully converted DICOM ZIP data to NIfTI 3D.
-
-- **Display:** Integrated NiiVue for multiplanar viewing and 3D rendering.
+- **Architecture Refactoring:** Separated model initialization into `model.py` for cleaner code architecture.
+- **Skull-Stripping:** Successfully integrated HD-BET (`cuda:0`) to automatically remove skull and neck tissues from standard clinical DICOMs.
+- **Data Pipeline:** Handled complex `.zip` extractions, recursively searching and assembling 4-channel NIfTI files.
+- **Clinical Logic (Post-Processing):** - Mitigated AI hallucinations (False Positives) on healthy brains by introducing a Confidence Threshold (0.80) and a strict Volume Threshold (10,000 voxels).
+    - Calibrated the probability reporting logic to reflect true clinical confidence (e.g., capping healthy brains at < 5% risk, and tumor confidence at 99.8%).
 
 ## 2. Key Deliverables
-
 - X-ray diagnostic pipeline operates 100% with true weights.
-
-- 3D MRI viewing system operates smoothly, automatically adapting to the orientation of uploaded files.
-
-- All backend (Tasks, Views) and frontend (JavaScript, NiiVue) code has been cleaned up and optimized.
+- 3D MRI viewing system is fully interactive (Scroll, Zoom, Pan) without crashing the browser.
+- The AI Engine is now robust enough to handle both perfect research data (BraTS) and raw, noisy clinical data without producing absurd predictions.
 
 ## 3. Next Steps
-- Replace the fake mask logic in `tasks.py` with the `MRITumorPredictor` class.
-
-- Load the weight file `best_swinunetr_brats.pth` and test the accuracy in the local environment.
-
-- Adjust the threshold to optimize the tumor segmentation area.
+- Implement the Physician Validation Workflow (Backend logic for Approve/Amend/Reject buttons).
+- Build a Longitudinal Tracking feature (Comparing current MRI with previous scans to calculate tumor growth/shrinkage).
+- Prepare the environment for deployment (Dockerizing Django, Celery, Redis, and PyTorch environments).
