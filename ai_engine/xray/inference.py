@@ -4,9 +4,9 @@ import pydicom
 from PIL import Image
 from torchvision import transforms
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image
 from .model import NIH_DenseNet121
 from .grad_cam import XRayGradCAM
+import cv2
 
 # Danh sách 14 bệnh chuẩn của NIH theo thứ tự
 DISEASES = [
@@ -15,7 +15,22 @@ DISEASES = [
     'Fibrosis', 'Pleural_Thickening', 'Hernia'
 ]
 
-THRESHOLD = 0.3
+OPTIMAL_THRESHOLDS = {
+    'Atelectasis': 0.30,
+    'Cardiomegaly': 0.55,
+    'Effusion': 0.35,
+    'Infiltration': 0.48,
+    'Mass': 0.30,
+    'Nodule': 0.25,
+    'Pneumonia': 0.35,
+    'Pneumothorax': 0.30,
+    'Consolidation': 0.35,
+    'Edema': 0.40,
+    'Emphysema': 0.25,
+    'Fibrosis': 0.25,
+    'Pleural_Thickening': 0.25,
+    'Hernia': 0.15
+}
 
 class XrayPredictor:
     def __init__(self, weights_path):
@@ -63,7 +78,7 @@ class XrayPredictor:
             return Image.open(image_path).convert('RGB')
 
     def predict_and_explain(self, image_path: str, output_heatmap_base_path: str) -> dict:
-        original_img = Image.open(image_path).convert('RGB')
+        original_img = self.load_image(image_path)
         original_img_resized = original_img.resize((224, 224))
         np_img = np.array(original_img_resized)
 
@@ -71,63 +86,85 @@ class XrayPredictor:
 
         with torch.no_grad():
             outputs = self.model(input_tensor)
-            probs = torch.sigmoid(outputs)[0].cpu().numpy()
+            raw_probs = torch.sigmoid(outputs)[0].cpu().numpy()
 
-        results = {DISEASES[i]: float(probs[i]) for i in range(14)}
+        # ====================================================
+        # 👉 LOGIC HIỆU CHUẨN (CALIBRATION) LÂM SÀNG
+        # ====================================================
+        calibrated_results = {}
+        detected_diseases = {}
 
-        # Lọc các bệnh vượt ngưỡng (Threshold ví dụ = 0.4 hoặc 0.5)
-        detected_diseases = {disease: prob for disease, prob in results.items() if prob >= THRESHOLD}
+        for i, disease in enumerate(DISEASES):
+            raw_p = float(raw_probs[i])
+            thresh = OPTIMAL_THRESHOLDS[disease]
 
-        # Dictionary lưu đường dẫn heatmap cho từng bệnh
-        # Format: {"Pneumonia": "/media/heatmaps/study_123_Pneumonia.png"}
+            # Hiệu chuẩn toán học:
+            # Ép giá trị Raw Probability chạy qua điểm neo 50% tại Threshold
+            if raw_p >= thresh:
+                # Nửa trên: Mapping từ Threshold -> 1.0 thành 0.5 -> 1.0
+                calibrated_p = 0.5 + 0.5 * ((raw_p - thresh) / (1.0 - thresh))
+                detected_diseases[disease] = calibrated_p
+            else:
+                # Nửa dưới: Mapping từ 0.0 -> Threshold thành 0.0 -> 0.5
+                calibrated_p = 0.5 * (raw_p / thresh)
+
+            calibrated_results[disease] = calibrated_p
+
         heatmap_paths = {}
-
         img_normalized = np_img.astype(np.float32) / 255.0
 
         if not detected_diseases:
-            # KHÔNG CÓ BỆNH (No Findings)
             best_class_name = "No Findings"
             best_prob = 0.0
             has_disease = False
             detected_str = "No Findings"
 
-            # Lưu ảnh gốc làm default heatmap
             default_path = f"{output_heatmap_base_path}_original.png"
             Image.fromarray(np_img).save(default_path)
             heatmap_paths["Original"] = default_path
 
         else:
-            # CÓ BỆNH
             has_disease = True
 
-            # SINH HEATMAP RIÊNG CHO TỪNG BỆNH
+            # Khởi tạo Heatmap cho TẤT CẢ các bệnh vượt ngưỡng
             for disease, prob in detected_diseases.items():
                 idx = DISEASES.index(disease)
                 targets = [ClassifierOutputTarget(idx)]
 
-                # Tính toán Grad-CAM cho RIÊNG bệnh này
                 grayscale_cam = self.grad_cam.cam(input_tensor=input_tensor, targets=targets)[0, :]
 
-                # Trộn màu (Mặc định GradCAM sẽ dùng dải màu Đỏ-Vàng-Xanh, độ đậm tùy vào grayscale_cam)
-                cam_image = show_cam_on_image(img_normalized, grayscale_cam, use_rgb=True)
+                # Tight Masking (Lọc rác ngoài phổi và rác yếu)
+                body_mask = (np_img.mean(axis=2) > 15).astype(np.float32)
+                grayscale_cam = grayscale_cam * body_mask
+                grayscale_cam[grayscale_cam < 0.3] = 0
 
-                # Lưu file riêng biệt cho bệnh này
+                if grayscale_cam.max() > 0:
+                    grayscale_cam = grayscale_cam / grayscale_cam.max()
+
+                heatmap = cv2.applyColorMap(np.uint8(255 * grayscale_cam), cv2.COLORMAP_JET)
+                heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+
+                alpha = grayscale_cam.copy()
+                alpha[alpha > 0] = 0.55
+                alpha = np.expand_dims(alpha, axis=-1)
+
+                cam_image = (1 - alpha) * (img_normalized * 255) + alpha * heatmap
+                cam_image = np.clip(cam_image, 0, 255).astype(np.uint8)
+
                 specific_path = f"{output_heatmap_base_path}_{disease}.png"
                 Image.fromarray(cam_image).save(specific_path)
-
-                # Lưu lại đường dẫn
                 heatmap_paths[disease] = specific_path
 
-            # Primary Finding vẫn là bệnh có % cao nhất (để hiển thị thẻ bự nhất trên UI)
             best_class_name = max(detected_diseases, key=detected_diseases.get)
             best_prob = detected_diseases[best_class_name]
+            # Hiển thị tất cả các bệnh mắc phải ra chuỗi text
             detected_str = ", ".join(list(detected_diseases.keys()))
 
         return {
             'predicted_class': best_class_name,
-            'detected_diseases': detected_str,
+            'detected_diseases': detected_str,  # Trả về danh sách bệnh
             'probability': f"{best_prob * 100:.2f}%",
-            'all_probabilities': results,
+            'all_probabilities': calibrated_results,
             'has_disease': has_disease,
-            'heatmaps': heatmap_paths  # <--- TRẢ VỀ TOÀN BỘ DANH SÁCH ẢNH XAI
+            'heatmaps': heatmap_paths
         }

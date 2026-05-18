@@ -62,7 +62,7 @@ def convert_dicom_to_png(study):
         new_filepath = f"{base_path_disk}.png"
 
         # 2. Tạo và lưu file PNG
-        img = Image.fromarray(pixel_array)
+        img = Image.fromarray(pixel_array).convert('RGB')
 
         # Lưu file PNG đè lên
         img.save(new_filepath)

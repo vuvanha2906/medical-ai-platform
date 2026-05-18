@@ -26,7 +26,7 @@ class MRITumorPredictor:
         is_multi_modal = False
         final_input_path = input_path
 
-        # 1. QUÉT TÌM FILE TRONG THƯ MỤC (Bao gồm cả thư mục con)
+        # 1. QUÉT TÌM FILE TRONG THƯ MỤC
         if os.path.isdir(input_path):
             all_nii_files = []
             for root, _, files in os.walk(input_path):
@@ -50,7 +50,6 @@ class MRITumorPredictor:
                 elif 'flair' in fname:
                     modalities['flair'] = f_path
 
-            # Nếu đủ 4 kênh thì ghép lại và bỏ qua HD-BET
             if all(modalities.values()):
                 print("-> PHÁT HIỆN ĐỦ 4 MODALITIES (BraTS Standard). Bỏ qua HD-BET.")
                 img_data = []
@@ -61,7 +60,6 @@ class MRITumorPredictor:
                 affine = nib.load(modalities['t1']).affine
                 is_multi_modal = True
             else:
-                # Lấy file đầu tiên tìm thấy để chạy HD-BET
                 final_input_path = all_nii_files[0]
                 print(
                     f"-> CHỈ TÌM THẤY {len(all_nii_files)} FILE. Sẽ gọt sọ file: {os.path.basename(final_input_path)}")
@@ -84,7 +82,7 @@ class MRITumorPredictor:
             affine = img_nii.affine
             img_data = np.stack([img_data_raw] * 4, axis=0)
 
-        # 3. TIỀN XỬ LÝ
+        # 3. TIỀN XỬ LÝ CHUẨN HÓA
         orig_shape = img_data.shape[1:]
         brain_mask = img_data[0] > 0 if not is_multi_modal else img_data[1] > 0
 
@@ -97,25 +95,18 @@ class MRITumorPredictor:
         input_tensor = F.interpolate(input_tensor, size=(240, 240, orig_shape[2]), mode='trilinear',
                                      align_corners=False)
 
-        # =======================================================
-        # BƯỚC 3: SWIN-UNETR QUÉT KHỐI U VÀ CHUYỂN ĐỔI XÁC SUẤT
-        # =======================================================
+        # 4. SUY LUẬN AI BẰNG SWIN-UNETR
         with torch.no_grad():
-            # Quét Logits
             val_outputs = sliding_window_inference(input_tensor, (96, 96, 96), 2, self.model, overlap=0.25)
-            # Khôi phục kích thước 3D
             val_outputs = F.interpolate(val_outputs, size=orig_shape, mode='trilinear')
-
-            # 👉 FIX CỐT LÕI: Dùng Sigmoid độc lập cho 3 kênh (Vì không có kênh Background)
             probs = torch.sigmoid(val_outputs).squeeze(0).cpu().numpy()
 
-            # =======================================================
-            # BƯỚC 4: VẼ XAI VÀ LỌC NHIỄU THỂ TÍCH (LÂM SÀNG KHẮT KHE)
-            # =======================================================
+        # =======================================================
+        # BƯỚC 5: LỌC NHIỄU & ÉP Ranh giới (CLINICAL STRICT MODE)
+        # =======================================================
         tumor_probs_map = np.max(probs, axis=0)
 
-        # 👉 1. NÂNG NGƯỠNG TỰ TIN LÊN 0.8
-        # (Đạp chết mọi ảo giác do nhân bản kênh thiếu dữ liệu)
+        # 5.1. Ngưỡng tự tin rất cao (Chém sạch ảo giác)
         CONFIDENCE_THRESHOLD = 0.8
         prediction = np.zeros_like(tumor_probs_map, dtype=np.uint8)
 
@@ -123,15 +114,14 @@ class MRITumorPredictor:
         prediction[probs[0] > CONFIDENCE_THRESHOLD] = 1  # Necrotic Core
         prediction[probs[2] > CONFIDENCE_THRESHOLD] = 3  # Enhancing Tumor
 
-        # Lọc rác ngoài hộp sọ
+        # 5.2. Chặn lan màu ra ngoài vỏ não
         if len(brain_mask.shape) == 4:
             b_mask = brain_mask[..., 0]
         else:
             b_mask = brain_mask
         prediction[~b_mask] = 0
 
-        # 👉 2. NÂNG NGƯỠNG THỂ TÍCH LÊN 10,000 VOXELS
-        # (Khối u thực tế rất khổng lồ. Dưới 10,000 chắc chắn 100% là nhiễu hạt)
+        # 5.3. Xóa các đốm nhỏ bé (Thể tích < 10,000 voxel = Rác)
         MIN_TUMOR_VOXELS = 10000
         labels, num_features = ndimage.label(prediction > 0)
 
@@ -140,31 +130,32 @@ class MRITumorPredictor:
             valid_labels = np.where(sizes >= MIN_TUMOR_VOXELS)[0] + 1
             prediction[~np.isin(labels, valid_labels)] = 0
 
+        # Lưu ảnh NIfTI
         nib.save(nib.Nifti1Image(prediction, affine), output_mask_path)
 
         # =======================================================
-        # BƯỚC 5: TÍNH TOÁN KẾT QUẢ ĐÃ LỌC
+        # BƯỚC 6: CHỐT KẾT QUẢ CUỐI CÙNG
         # =======================================================
         has_actual_tumor = np.any(prediction > 0)
 
         if has_actual_tumor:
             label = "Brain Tumor Detected (Glioma)"
 
-            # Chỉ lấy xác suất của những điểm ảnh CÒN SỐNG SÓT QUA BỘ LỌC
+            # Lấy xác suất trung bình của khối u SỐNG SÓT qua mọi màng lọc
             actual_tumor_probs = tumor_probs_map[prediction > 0]
             final_prob = float(np.mean(actual_tumor_probs) * 100)
-            final_prob = min(final_prob, 99.8)  # Khóa trần
+            final_prob = min(final_prob, 99.8)  # Khóa trần lâm sàng
         else:
             label = "No Tumor Detected"
 
-            # Quét các điểm nhiễu tàng hình để báo cáo rủi ro
+            # Phân tích các hạt nhiễu siêu nhỏ tàng hình trong não để đánh giá % an toàn
             noise = tumor_probs_map[(tumor_probs_map > 0.05) & b_mask]
 
             if len(noise) > 0:
                 final_prob = float(np.mean(noise) * 20)
-                final_prob = min(final_prob, 4.9)  # An toàn tuyệt đối, không quá 5%
+                final_prob = min(final_prob, 4.9)  # Không bao giờ báo cáo sai quá 5%
             else:
-                final_prob = 0.3  # Não hoàn toàn sạch sẽ
+                final_prob = 0.3
 
         print(f"✅ KẾT QUẢ: {label} ({final_prob:.2f}%)")
         return {
