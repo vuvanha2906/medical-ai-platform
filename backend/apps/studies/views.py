@@ -15,7 +15,7 @@ from .utils import render_to_pdf
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
-
+import json
 
 class StudyUploadView(generics.CreateAPIView):
     """Endpoint to upload a new study (image + metadata)."""
@@ -108,6 +108,68 @@ class DownloadReportPDFView(LoginRequiredMixin, DetailView):
 
 class AnalyticsView(LoginRequiredMixin, TemplateView):
     template_name = "studies/analytics.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # 1. Tổng số ca chụp
+        total_studies = Study.objects.count()
+
+        # 2. Số ca xử lý trong ngày hôm nay
+        today = timezone.now().date()
+        today_studies = Study.objects.filter(created_at__date=today).count()
+
+        # 3. Tính độ tự tin trung bình
+        predictions = Prediction.objects.all()
+        total_conf = 0.0
+        valid_preds = 0
+        for p in predictions:
+            try:
+                # Chuyển chuỗi "95.50%" thành số thực 95.50
+                if p.probability:
+                    conf_value = float(p.probability.replace('%', '').strip())
+                    total_conf += conf_value
+                    valid_preds += 1
+            except ValueError:
+                continue
+
+        avg_confidence = round(total_conf / valid_preds, 1) if valid_preds > 0 else 0.0
+
+        # 4. Tính tổng số ca có bệnh (Không tính Normal / No Findings)
+        pathologies = predictions.exclude(prediction_label__in=['No Tumor Detected', 'No Findings'])
+        total_pathologies = pathologies.count()
+
+        # 5. Dữ liệu biểu đồ tròn (Disease Distribution)
+        disease_counts = predictions.values('prediction_label').annotate(count=Count('id')).order_by('-count')[:6]
+
+        chart_labels = []
+        chart_data = []
+        for item in disease_counts:
+            # Nếu chưa có label (ví dụ đang processing), bỏ qua
+            if item['prediction_label']:
+                chart_labels.append(item['prediction_label'])
+                chart_data.append(item['count'])
+
+        # Fallback nếu database trống
+        if not chart_labels:
+            chart_labels = ["No Data Yet"]
+            chart_data = [1]
+
+        # 6. Lấy 5 ca xử lý mới nhất để hiển thị vào bảng
+        recent_studies = Study.objects.select_related('prediction').order_by('-created_at')[:5]
+
+        # Đẩy tất cả dữ liệu vào Context để HTML render
+        context.update({
+            'total_studies': total_studies,
+            'today_studies': today_studies,
+            'avg_confidence': avg_confidence,
+            'total_pathologies': total_pathologies,
+            'chart_labels': json.dumps(chart_labels),
+            'chart_data': json.dumps(chart_data),
+            'recent_studies': recent_studies,
+        })
+
+        return context
 
 class AnalyticsDataView(APIView):
     permission_classes = [IsAuthenticated]

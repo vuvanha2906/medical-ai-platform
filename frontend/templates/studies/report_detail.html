@@ -526,8 +526,20 @@
                                 </div>
                                 <div>
                                     <p class="font-semibold text-emerald-400">Report Validated</p>
-                                    <p class="text-sm text-gray-300 mt-1">Approved by <strong>Dr. Sarah Chen,
-                                        MD</strong></p>
+                                    <p class="text-sm text-gray-300 mt-1">
+                                        Approved by
+                                        <strong>
+                                            {% if user.is_authenticated %}
+                                                {% if user.first_name or user.last_name %}
+                                                    Dr. {{ user.first_name }} {{ user.last_name }}
+                                                {% else %}
+                                                    Dr. {{ user.username }}
+                                                {% endif %}
+                                            {% else %}
+                                                Authorized Physician
+                                            {% endif %}
+                                        </strong>
+                                    </p>
                                     <p class="text-xs text-gray-500 font-mono mt-1" id="approvalTimestamp"></p>
                                 </div>
                             </div>
