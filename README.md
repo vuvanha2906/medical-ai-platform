@@ -9,10 +9,10 @@ Web-based Medical Image Diagnosis using Deep Learning
 
 ## 📸 System Showcase
 
-**[]**
+**<img width="773" height="433" alt="demo_xray" src="https://github.com/user-attachments/assets/60acdf99-3427-4e8e-b1cf-ebb009c0a204" />**
 > *Chest X-ray multi-label classification with OpenCV-blended tight Grad-CAM masking and optimal threshold calibration.*
 
-**[]**
+**<img width="774" height="399" alt="demo_mri" src="https://github.com/user-attachments/assets/857c24f3-c671-4657-8061-364d7ddba2ab" />**
 > *3D Brain MRI (BraTS) semantic segmentation visualized natively in browser via NiiVue WebGL, featuring HD-BET skull-stripping and clinical-grade volume filtering.*
 
 ## Tech Stack
