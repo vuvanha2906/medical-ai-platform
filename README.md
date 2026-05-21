@@ -3,7 +3,17 @@
 Web-based Medical Image Diagnosis using Deep Learning
 **X-ray Lung Pathology** • **Brain Tumor 3D MRI Segmentation** • **Explainable AI (xAI)**
 
+[![View Web Portfolio](https://img.shields.io/badge/View-Web_Portfolio-10b981?style=for-the-badge)](https://vuvanha-portfolio.vercel.app/)
+
 ---
+
+## 📸 System Showcase
+
+**[]**
+> *Chest X-ray multi-label classification with OpenCV-blended tight Grad-CAM masking and optimal threshold calibration.*
+
+**[]**
+> *3D Brain MRI (BraTS) semantic segmentation visualized natively in browser via NiiVue WebGL, featuring HD-BET skull-stripping and clinical-grade volume filtering.*
 
 ## Tech Stack
 
