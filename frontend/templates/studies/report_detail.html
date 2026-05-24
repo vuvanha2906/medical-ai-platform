@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        const CURRENT_MODALITY = '{{ study.modality }}';
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Diagnostic Report - {{ study.patient_name }}</title>
@@ -579,6 +582,7 @@
             </div>
         </div>
     </div>
+{% include "studies/chatbot_widget.html" %}
 </main>
 
 <script>
