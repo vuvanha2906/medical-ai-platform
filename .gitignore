@@ -25,3 +25,5 @@ uploads/
 # Trọng số mô hình
 ai_engine/xray/weights/
 ai_engine/mri_turmor/weights/
+
+ai_engine/knowledge_base
