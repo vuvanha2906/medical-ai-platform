@@ -14,6 +14,9 @@ Web-based Medical Image Diagnosis using Deep Learning
 
 **<img width="774" height="399" alt="demo_mri" src="https://github.com/user-attachments/assets/857c24f3-c671-4657-8061-364d7ddba2ab" />**
 > *3D Brain MRI (BraTS) semantic segmentation visualized natively in browser via NiiVue WebGL, featuring HD-BET skull-stripping and clinical-grade volume filtering.*
+> 
+**<img width="765" height="397" alt="demo_chatbot" src="https://github.com/user-attachments/assets/59b396c4-1024-4f27-9435-981ff535b58c" />**
+> **
 
 ## Tech Stack
 
