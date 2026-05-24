@@ -16,7 +16,7 @@ Web-based Medical Image Diagnosis using Deep Learning
 > *3D Brain MRI (BraTS) semantic segmentation visualized natively in browser via NiiVue WebGL, featuring HD-BET skull-stripping and clinical-grade volume filtering.*
 > 
 **<img width="765" height="397" alt="demo_chatbot" src="https://github.com/user-attachments/assets/59b396c4-1024-4f27-9435-981ff535b58c" />**
-> **
+> *Context-aware clinical RAG assistant powered by DeepSeek LLM and ChromaDB vector retrieval, featuring strict anti-hallucination guardrails for evidence-based medical reasoning.*
 
 ## Tech Stack
 
@@ -26,6 +26,7 @@ Web-based Medical Image Diagnosis using Deep Learning
 | Task Queue      | Celery 5 + Redis                             |
 | Deep Learning   | PyTorch, torchvision, MONAI                  |
 | Explainability  | pytorch-grad-cam                             |
+| LLM & RAG       | LangChain, DeepSeek API, ChromaDB, HuggingFace|
 | Medical Imaging | nibabel, HD-BET, pydicom, OpenCV             |
 | Frontend        | Tailwind CSS, NiiVue (WebGL 3D Viewer)       |
 
@@ -172,15 +173,13 @@ medical_ai_platform/
 │       └── studies/        ← Study + Prediction Models
 │
 ├── ai_engine/
-│   ├── common/             ← Shared models and utilities
+├── common/             
 │   ├── xray/               ← DenseNet121 + Grad-CAM
-│   │   ├── weights/
-│   │   │   └── best_nih_densenet121.pth
-│   │   ├── model.py
-│   │   ├── grad_cam.py
-│   │   └── inference.py
-│   │
-│   └── alzheimer/          ← Multi-view CNN + NIfTI pipeline
+│   ├── mri_tumor/          ← Multi-view CNN + NIfTI pipeline
+│   ├── knowledge_base/     ← Medical PDFs for RAG
+│   ├── chroma_db/          ← Vector database storage
+│   ├── ingest.py           ← Document embedding script
+│   └── rag_queery.py          ← Medical RAG Assistant logic
 │
 ├── frontend/               ← Django templates + static assets
 └── tests/
@@ -232,7 +231,12 @@ You can also view or run the training pipelines directly on Kaggle, where datase
     - HD-BET Skull Stripping
     - Clinical Volume Filtering
 
-[ ] Phase 4: Physician Validation Workflow
+[x] Phase 4: LLM-Assisted Clinical RAG
+    - DeepSeek API Integration
+    - ChromaDB Vector Storage & HuggingFace Embeddings
+    - Anti-hallucination Prompt Engineering
+
+[ ] Phase 5: Physician Validation Workflow
     - Longitudinal Patient Tracking
     - Multi-study Comparison
     - Clinical Review Pipeline
