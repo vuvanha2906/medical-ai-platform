@@ -15,4 +15,5 @@ urlpatterns = [
 
     path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
     path('api/analytics/', views.AnalyticsDataView.as_view(), name='analytics_data'),
+    path('api/chat/', views.chat_with_ai, name='chat_with_ai'),
 ]

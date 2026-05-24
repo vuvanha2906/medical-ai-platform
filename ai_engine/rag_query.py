@@ -38,14 +38,14 @@ class MedicalRAGAssistant:
         )
 
         # Khởi tạo bộ máy tìm kiếm (Lấy 3 đoạn văn bản liên quan nhất)
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 6})
+        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 9})
 
         # 3. Khởi tạo LLM (Sử dụng DeepSeek chuẩn mới)
         self.llm = ChatOpenAI(
             model="deepseek-v4-pro",  # Sử dụng model cao cấp của DeepSeek
             api_key=os.getenv("DEEPSEEK_API_KEY"),
             base_url="https://api.deepseek.com/v1",  # URL chuẩn mới
-            max_tokens=1000,
+            max_tokens=3000,
             temperature=0.2  # Temperature thấp = Tính chính xác cao, hạn chế bịa đặt (hallucination)
         )
 

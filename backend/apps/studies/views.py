@@ -15,7 +15,27 @@ from .utils import render_to_pdf
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from ai_engine.rag_query import MedicalRAGAssistant
 import json
+
+xray_rag = MedicalRAGAssistant(modality_name="xray")
+mri_rag = MedicalRAGAssistant(modality_name="mri")
+
+
+@csrf_exempt
+def chat_with_ai(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        question = data.get("question")
+        modality = data.get("modality", "xray")  # xray hoặc mri
+
+        # Chọn assistant phù hợp
+        rag = xray_rag if modality.lower() == "xray" else mri_rag
+
+        answer = rag.ask(question)
+        return JsonResponse({"answer": answer})
 
 class StudyUploadView(generics.CreateAPIView):
     """Endpoint to upload a new study (image + metadata)."""
